@@ -1,7 +1,7 @@
 # cpp-tips
 Collection of small tips and tricks for C++
 
-## Creating a lambda is same as creating a struct with operator() overloaded
+## Creating a lambda behaves the same as creating a struct with operator() overloaded
 ```c++
 #include <iostream>
 
