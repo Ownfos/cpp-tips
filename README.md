@@ -37,11 +37,18 @@ Counter.h
 // 'inline' keyword allows multiple identical definitions!
 // If we declared it without 'inline', the compiler would complain about ODR violation.
 inline int counter = 0;
+
+// 'static' keyword is a little bit different.
+// Since it has internal linkage, compilder doesn't say anything about ODR
+// but the value of counter2 could be different for each translation unit.
+static int counter2 = 0;
 ```
 Foo.h
 ```c++
 #include "Counter.h"
-inline auto foo() -> int
+
+auto foo() -> int
+auto foo2() -> int
 ```
 Foo.cpp
 ```c++
@@ -50,6 +57,11 @@ Foo.cpp
 auto foo() -> int
 {
     return ++counter;
+}
+
+auto foo2() -> int
+{
+    return ++counter2;
 }
 ```
 main.cpp
@@ -60,5 +72,6 @@ main.cpp
 auto main() -> int
 {
     std::cout << foo() << foo() << counter << std::end; // prints 122
+    std::cout << foo2() << foo2() << counter2 << std::end; // prints 120
 }
 ```
