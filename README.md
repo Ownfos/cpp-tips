@@ -47,8 +47,8 @@ Foo.h
 ```c++
 #include "Counter.h"
 
-auto foo() -> int
-auto foo2() -> int
+auto foo() -> int;
+auto foo2() -> int;
 ```
 Foo.cpp
 ```c++
