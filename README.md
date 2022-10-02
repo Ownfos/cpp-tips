@@ -1,6 +1,29 @@
 # cpp-tips
 Collection of small tips and tricks for C++
 
+## Creating a lambda is same as creating a struct with operator() overloaded
+```c++
+#include <iostream>
+
+struct Lambda
+{
+    int captureThis = 234; // Captured variable stored as a member variable
+    int operator()(int val)
+    {
+        return val + captureThis;
+    }
+};
+
+int main()
+{
+    int captureThis = 234;
+    
+    int result1 = Lambda()(1000);
+    int result2 = [=](int val){ return val + captureThis; }(1000);
+    
+    std::cout << result1 << " " << result2 << std::endl; // prints 1234 1234
+}
+```
 ## Hiding variable names using extra scope
 ```c++
 int main()
