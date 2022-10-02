@@ -1,6 +1,26 @@
 # cpp-tips
 Collection of small tips and tricks for C++
 
+## Hiding variable names using extra scope
+```c++
+int main()
+{
+    // If you need, you can nest an extra scope to reuse a variable name.
+    // Use this in case you have to create several variables of similar intent
+    // such as desc1, desc2, result1, result2, ...
+    // But don't forget that avoiding this situation by giving them
+    // distinguishable and meaningful names is the best option.
+    {
+        int result = someComplexFunction();
+        // Handle result...
+    }
+    {
+        std::vector<int> result = anotherComplexFunction();
+        // Handle result
+    }
+{
+```
+
 ## Trailing return type
 ```c++
 #include <iostream>
