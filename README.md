@@ -39,7 +39,7 @@ Counter.h
 inline int counter = 0;
 
 // 'static' keyword is a little bit different.
-// Since it has internal linkage, compilder doesn't say anything about ODR
+// Since global variables marked as 'static' have internal linkage, compilder doesn't say anything about ODR
 // but the value of counter2 could be different for each translation unit.
 static int counter2 = 0;
 ```
