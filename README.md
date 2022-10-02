@@ -75,3 +75,17 @@ auto main() -> int
     std::cout << foo2() << foo2() << counter2 << std::end; // prints 120
 }
 ```
+## Declaring and initializing static member variables at the same time (in a header file)
+IDGenerator.h
+```c++
+class IDGenerator
+{
+private:
+    // Valid from C++17.
+    // Note that 'inline static' and 'static inline' have same effect,
+    // but the latter is prefered because 'static' is a storage class specifier
+    // and C standard says that such keywords should come first.
+    static inline int nextID = 0; 
+};
+```
+Checkout this [stackoverflow question](https://stackoverflow.com/questions/61714110/static-inline-vs-inline-static) for more information on 'inline static' vs 'static inline'.
