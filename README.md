@@ -1,6 +1,96 @@
 # cpp-tips
 Collection of small tips and tricks for C++
 
+## Initializing std::vector with initializer-list always invokes copy constructor
+```c++
+#include <iostream>
+#include <vector>
+
+struct Test
+{
+    int id;
+
+    Test(int id)
+        : id(id)
+    {
+        std::cout << "default constructor " << id << std::endl;
+    }
+    Test(const Test& other)
+        : id(other.id)
+    {
+        std::cout << "copy constructor " << id << std::endl;
+    }
+    Test(Test&& other)
+        : id(other.id)
+    {
+        std::cout << "move constructor " << id << std::endl;
+    }
+    Test& operator=(const Test& other)
+    {
+        id = other.id;
+        std::cout << "copy assignment " << id << std::endl;
+        return *this;
+    }
+    Test& operator=(Test&& other)
+    {
+        id = other.id;
+        std::cout << "move assignment " << id << std::endl;
+        return *this;
+    }
+    ~Test() = default;
+};
+
+int main()
+{
+    // Two Test instances are created and copied.
+    auto v = std::vector<Test>{{1}, {2}};
+
+    std::cout << "======== reserve ========" << std::endl;
+
+    // While the vector is resizing, copy constructors are called.
+    v.reserve(100);
+
+    std::cout << "======== push_back ========" << std::endl;
+
+    // Given that v has enough space, push_back also invokes move constructor!
+    // One default constructor and one move constructor are called.
+    v.push_back({3});
+
+    std::cout << "======== emplace_back ========" << std::endl;
+    
+    // Default constructor is called.
+    // Although push_back(T&&) exists, emplace_back still has advantage on not creating temporary objects.
+    // Note that only emplace_back is capable of perfect forwarding!
+    v.emplace_back(4);
+}
+```
+Expected output:
+```
+default constructor 1
+default constructor 2
+copy constructor 1
+copy constructor 2
+======== reserve ========
+copy constructor 1
+copy constructor 2
+======== push_back ========
+default constructor 3
+move constructor 3
+======== emplace_back ========
+default constructor 4
+```
+Checkout this [stackoverflow question](https://stackoverflow.com/questions/4303513/push-back-vs-emplace-back) for more information on difference between push_back and emplace_back
+## const std::string& can also cause allocation
+```
+void foo(const std::string&) {}
+void foo2(std::string_view) {}
+
+int main()
+{
+    foo("asdf"); // temporary std::string instance is created!
+    foo2("asdf"); // no allocation happens.
+}
+```
 ## Creating a lambda behaves the same as creating a struct with operator() overloaded
 ```c++
 #include <iostream>
