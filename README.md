@@ -89,7 +89,7 @@ default constructor 4
 ```
 Checkout this [stackoverflow question](https://stackoverflow.com/questions/4303513/push-back-vs-emplace-back) for more information on difference between push_back and emplace_back
 ## <a name='tip2'></a>const std::string& and std::string_view can also cause allocation
-```
+```c++
 void foo(const std::string&) {}
 void foo2(std::string_view) {}
 
