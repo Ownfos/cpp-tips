@@ -9,6 +9,7 @@ Collection of small tips and tricks for C++
 - [Making your variable shared by all translation units](#tip6)
 - [Declaring and initializing static member variables at the same time (in a header file)](#tip7)
 - [Mimic 'named parameter' for function calls like other languages](#tip8)
+- [Fold expressions for variadic template](#tip9)
 
 ## <a name='tip1'></a>Initializing std::vector with initializer-list always invokes copy constructor
 ```c++
@@ -177,6 +178,13 @@ auto multiply(A a, B b) -> decltype(a*b)
     return a * b;
 }
 
+// Return types can be automatically deduced since C++14, so you can omit the -> part.
+template<typename A, typename B>
+auto multiply2(A a, B b)
+{
+    return a * b;
+}
+
 // Note that expressions passed to decltype() are not evaluated.
 // If you compile and execute this program, you'll see nothing happens.
 // You can also know that it's true because static_assert works.
@@ -269,3 +277,36 @@ auto main() -> int
     foo({.x = 2, .y = -4});
 }
 ```
+## <a name='tip9'></a>Fold expressions for variadic template
+```c++
+#include <iostream>
+#include <vector>
+
+using namespace std::string_literals;
+
+template<typename First, typename... Others>
+auto sum(First first, Others... others)
+{
+    // There are four types of fold expression:
+    // 1. binary left fold: (init op ... op pack)
+    // 2. binary right fold: (pack op ... op init)
+    // 3. unary left fold: (... op pack)
+    // 4. unary right fold: (pack op ...)
+    //
+    // left fold groups the leftmost term first, while right fold groups the rightmost one.
+    // ex) if parameters are given as E1, E2, E3, E4, and E5,
+    // (... + others) turns into (E1 + (E2 + (E3 + (E4 + E5)))), while
+    // (others + ...) turns into ((((E1 + E2) + E3) + E4) + E5)
+    //
+    // The expression below expands to (((first + second) + third) + ...) + last;
+    return (first + ... + others);
+}
+
+auto main() -> int
+{
+    // Since sum uses a left fold, std::string + string literal is performed consequently, creating a std::string as a result.
+    // If we passed string literal as the first parameter, compiler would complain that (const char* + const char*) is an invalid operation.
+    std::cout << sum("Hello, "s, "world", "!") << std::endl; // prints Hello, world!
+}
+```
+Checkout this [cppreference page](https://en.cppreference.com/w/cpp/language/fold) for more information.
