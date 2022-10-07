@@ -8,6 +8,7 @@ Collection of small tips and tricks for C++
 - [Trailing return type](#tip5)
 - [Making your variable shared by all translation units](#tip6)
 - [Declaring and initializing static member variables at the same time (in a header file)](#tip7)
+- [Mimic 'named parameter' for function calls like other languages](#tip8)
 
 ## <a name='tip1'></a>Initializing std::vector with initializer-list always invokes copy constructor
 ```c++
@@ -250,3 +251,21 @@ private:
 };
 ```
 Checkout this [stackoverflow question](https://stackoverflow.com/questions/61714110/static-inline-vs-inline-static) for more information on 'inline static' vs 'static inline'.
+## <a name='tip8'></a>Mimic 'named parameter' for function calls like other languages
+```c++
+struct Args
+{
+    int x;
+    int y;
+};
+
+auto foo(Args args) -> void
+{
+    // Do something with args.x and args.y
+}
+
+auto main() -> int
+{
+    foo({.x = 2, .y = -4});
+}
+```
