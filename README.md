@@ -2,7 +2,7 @@
 Collection of small tips and tricks for C++
 
 - [Initializing std::vector with initializer-list always invokes copy constructor](#tip1)
-- [const std::string& can also cause allocation](#tip2)
+- [const std::string& and std::string_view can also cause allocation](#tip2)
 - [Creating a lambda behaves the same as creating a struct with operator() overloaded](#tip3)
 - [Hiding variable names using extra scope](#tip4)
 - [Trailing return type](#tip5)
@@ -88,17 +88,37 @@ move constructor 3
 default constructor 4
 ```
 Checkout this [stackoverflow question](https://stackoverflow.com/questions/4303513/push-back-vs-emplace-back) for more information on difference between push_back and emplace_back
-## <a name='tip2'></a>const std::string& can also cause allocation
+## <a name='tip2'></a>const std::string& and std::string_view can also cause allocation
 ```
 void foo(const std::string&) {}
 void foo2(std::string_view) {}
 
 int main()
 {
-    foo("asdf"); // temporary std::string instance is created!
-    foo2("asdf"); // no allocation happens.
+    // Example 1) use of const std::string& causing an allocation
+    {
+        foo("asdf"); // temporary std::string instance is created!
+        foo2("asdf"); // no allocation happens.
+    }
+    
+    // Example 2) use of std::string_view causing an allocation
+    {
+        std::string fileContent{"content of a 4GB file"};
+        std::string_view contentView{fileContent};
+
+        // Do some stuffs using substrings of fileContent.
+        // Note that std::string_view can handle substrings efficiently.
+
+        std::string anotherString(contentView); // Oops! We've just created another 4GB string on our memory
+        std::string anotherString2(std::move(fileContent)); // Consider using move semantics if you no longer need the original instance
+    }
 }
 ```
+Example 2 is quite artificial and probably no one would ever do that intentionally.<br>
+So just remember two things:
+1. References and views does NOT guarantee that no allocation will happen.<br>
+   These might lead to extra allocation or creation of temporary objects when misused.
+3. In some cases, std::move might be a better option over references and views.
 ## <a name='tip3'></a>Creating a lambda behaves the same as creating a struct with operator() overloaded
 ```c++
 #include <iostream>
