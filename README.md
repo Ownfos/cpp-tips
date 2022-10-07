@@ -1,7 +1,15 @@
 # cpp-tips
 Collection of small tips and tricks for C++
 
-## Initializing std::vector with initializer-list always invokes copy constructor
+- [Initializing std::vector with initializer-list always invokes copy constructor](#tip1)
+- [const std::string& can also cause allocation](#tip2)
+- [Creating a lambda behaves the same as creating a struct with operator() overloaded](#tip3)
+- [Hiding variable names using extra scope](#tip4)
+- [Trailing return type](#tip5)
+- [Making your variable shared by all translation units](#tip6)
+- [Declaring and initializing static member variables at the same time (in a header file)](#tip7)
+
+## <a name='tip1'></a>Initializing std::vector with initializer-list always invokes copy constructor
 ```c++
 #include <iostream>
 #include <vector>
@@ -80,7 +88,7 @@ move constructor 3
 default constructor 4
 ```
 Checkout this [stackoverflow question](https://stackoverflow.com/questions/4303513/push-back-vs-emplace-back) for more information on difference between push_back and emplace_back
-## const std::string& can also cause allocation
+## <a name='tip2'></a>const std::string& can also cause allocation
 ```
 void foo(const std::string&) {}
 void foo2(std::string_view) {}
@@ -91,7 +99,7 @@ int main()
     foo2("asdf"); // no allocation happens.
 }
 ```
-## Creating a lambda behaves the same as creating a struct with operator() overloaded
+## <a name='tip3'></a>Creating a lambda behaves the same as creating a struct with operator() overloaded
 ```c++
 #include <iostream>
 
@@ -114,7 +122,7 @@ int main()
     std::cout << result1 << " " << result2 << std::endl; // prints 1234 1234
 }
 ```
-## Hiding variable names using extra scope
+## <a name='tip4'></a>Hiding variable names using extra scope
 ```c++
 int main()
 {
@@ -134,7 +142,7 @@ int main()
 {
 ```
 
-## Trailing return type
+## <a name='tip5'></a>Trailing return type
 ```c++
 #include <iostream>
 #include <type_traits>
@@ -164,7 +172,7 @@ auto main() -> int
 ```
 Checkout this [link](https://www.danielsieger.com/blog/2022/01/28/cpp-trailing-return-types.html) for more information.
 
-## Making your variable shared by all translation units
+## <a name='tip6'></a>Making your variable shared by all translation units
 Counter.h
 ```c++
 // 'inline' keyword allows multiple identical definitions!
@@ -208,7 +216,7 @@ auto main() -> int
     std::cout << foo2() << foo2() << counter2 << std::end; // prints 120
 }
 ```
-## Declaring and initializing static member variables at the same time (in a header file)
+## <a name='tip7'></a>Declaring and initializing static member variables at the same time (in a header file)
 IDGenerator.h
 ```c++
 class IDGenerator
