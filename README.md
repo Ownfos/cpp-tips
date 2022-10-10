@@ -10,6 +10,9 @@ Collection of small tips and tricks for C++
 - [Declaring and initializing static member variables at the same time (in a header file)](#tip7)
 - [Mimic 'named parameter' for function calls like other languages](#tip8)
 - [Fold expressions for variadic template](#tip9)
+- [Multi-step (user defined) implicit conversion is not allowed](#tip10)
+- [Implicit conversion might cause confusion: consider using 'explicit'](#tip11)
+- [Rvalue reference parameter is a lvalue](#tip12)
 
 ## <a name='tip1'></a>Initializing std::vector with initializer-list always invokes copy constructor
 ```c++
@@ -310,3 +313,112 @@ auto main() -> int
 }
 ```
 Checkout this [cppreference page](https://en.cppreference.com/w/cpp/language/fold) for more information.
+## <a name='tip10'></a>Multi-step (user defined) implicit conversion is not allowed
+```c++
+#include <string>
+
+using namespace std::string_view_literals;
+
+class File
+{
+public:
+    File(std::string_view filename) {}
+};
+
+void parseFile(const File& file) {}
+
+int main()
+{
+    parseFile(File{"file1"}); // OK: const reference allows temporary objects.
+    parseFile("file2"sv); // OK: a one-step implicit conversion is allowed.
+    parseFile("file3"); // Error: invalid initialization of reference of type const File& from expression of type const char[6]
+}
+```
+Checkout this [stackoverflow question](https://stackoverflow.com/questions/12847272/multiple-implicit-conversions-on-custom-types-not-allowed) for more information on conversion rules.
+## <a name='tip11'></a>Implicit conversion might cause confusion: consider using 'explicit'
+```c++
+#include <vector>
+#include <string>
+
+using namespace std::string_view_literals;
+
+class Resource
+{
+public:
+    // Load resource from the file
+    /*explicit*/ Resource(std::string_view filename) {}
+    
+    // Construct with a preloaded data
+    /*explicit*/ Resource(int id, std::string&& content) {}
+    
+    Resource(const Resource& other) = default;
+    Resource(Resource&& other) noexcept = default;
+    Resource& operator=(const Resource& other) = default;
+    Resource& operator=(Resource&& other) noexcept = default;
+    ~Resource() = default;
+};
+
+class ResourceManager
+{
+public:
+    void addResource(Resource&& resource)
+    {
+        resources.emplace_back(std::move(resource));
+    }
+private:
+    std::vector<Resource> resources;
+};
+
+int main()
+{
+    auto rm = ResourceManager{};
+
+    // Works as expected.
+    auto r = Resource{"file1"};
+    rm.addResource(std::move(r)); // case 1) std::move a lvalue
+    rm.addResource(Resource{"file2"}); // case 2) temporary object is a rvalue
+
+    // Implicit conversion happens in these cases (not sure if it's intended).
+    // You might wonder 'why is this accepting a string?' or 'why are we trying to pass a string?'
+    //
+    // Given a constructor with single parameter, implicit conversions can happen without any sign (see case 4).
+    // If you don't want such behavior, mark the constructor as 'explicit' and these two lines won't compile.
+    // 
+    // Note) passing a string literal on case 4 would cause a multi-step (user defined) implicit conversion, which won't even compile.
+    // To be specific, string literal -> std::string_view -> Resource is required for an implicit Resource construction.
+    rm.addResource({"file3"}); // case 3) an implicit convserion using initializer list (somewhat noticeable due to curly braces)
+    rm.addResource("file4"sv); // case 4) an implicit conversion quite hard to spot
+    
+    // Constructors with two or more parameters usually don't cause trouble.
+    // Since you can't make implicit conversion happen without using an initializer list (i.e. case 4 cannot happen with multi-parameter constructors)
+    rm.addResource({5, "Hello, world!"}); // case 5) an implicit conversion using initializer list
+    rm.addResource(6, "you can't do this"); // case 6) Error: no matching function for call to ResourceManager::addResource(int, const char [18])
+}
+```
+Checkout this [stackoverflow question](https://stackoverflow.com/questions/12437241/c-always-use-explicit-constructor) for more opinions on when to use explicit constructors.
+## <a name='tip12'></a>Rvalue reference parameter is a lvalue
+```c++
+#include <iostream>
+
+void foo(const std::string&)
+{
+    std::cout << "lvalue ";
+}
+
+void foo(std::string&&)
+{
+    std::cout << "rvalue ";
+}
+
+void test(std::string&& s)
+{
+    foo(s); // foo(const std::string&)
+    foo(std::move(s)); // foo(std::string&&)
+}
+
+int main()
+{
+    // prints 'lvalue rvalue'
+    test("Use std::move if your constructor should 'move' rvalue reference parameters");
+}
+```
