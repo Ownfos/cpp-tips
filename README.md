@@ -92,6 +92,7 @@ move constructor 3
 ======== emplace_back ========
 default constructor 4
 ```
+Since std::unique_ptr is not copyable, [you can't initialize a std::vector<std::unique_ptr> using initializer list!!!](https://stackoverflow.com/questions/9618268/initializing-container-of-unique-ptrs-from-initializer-list-fails-with-gcc-4-7)<br>
 Checkout this [stackoverflow question](https://stackoverflow.com/questions/4303513/push-back-vs-emplace-back) for more information on difference between push_back and emplace_back
 ## <a name='tip2'></a>const std::string& and std::string_view can also cause allocation
 ```c++
