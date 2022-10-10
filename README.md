@@ -18,6 +18,7 @@ Collection of small tips and tricks for C++
 ```c++
 #include <iostream>
 #include <vector>
+#include <memory>
 
 struct Test
 {
@@ -75,6 +76,14 @@ int main()
     // Although push_back(T&&) exists, emplace_back still has advantage on not creating temporary objects.
     // Note that only emplace_back is capable of perfect forwarding!
     v.emplace_back(4);
+    
+    /* This is thereby impossible because std::unique_ptr doesn't have a copy constructor.
+    std::vector<std::unique_ptr<Test>> {
+        std::make_shared<Test>(1),
+        std::make_shared<Test>(2),
+        std::make_shared<Test>(3)
+    };
+    */
 }
 ```
 Expected output:
@@ -92,8 +101,8 @@ move constructor 3
 ======== emplace_back ========
 default constructor 4
 ```
-Since ```std::unique_ptr``` is not copyable, [you can't initialize a ```std::vector<std::unique_ptr<T>>``` using initializer list!!!](https://stackoverflow.com/questions/9618268/initializing-container-of-unique-ptrs-from-initializer-list-fails-with-gcc-4-7)<br>
-Checkout this [stackoverflow question](https://stackoverflow.com/questions/4303513/push-back-vs-emplace-back) for more information on difference between push_back and emplace_back
+Checkout this [stackoverflow question](https://stackoverflow.com/questions/4303513/push-back-vs-emplace-back) for more information on difference between push_back and emplace_back.<br>
+On the other hand, this [stackoverflow question](https://stackoverflow.com/questions/9618268/initializing-container-of-unique-ptrs-from-initializer-list-fails-with-gcc-4-7) handles the ```std::vector<std::unique_ptr<T>>``` initialization issue.<br>
 ## <a name='tip2'></a>const std::string& and std::string_view can also cause allocation
 ```c++
 void foo(const std::string&) {}
