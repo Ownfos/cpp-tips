@@ -13,6 +13,7 @@ Collection of small tips and tricks for C++
 - [Multi-step (user defined) implicit conversion is not allowed](#tip10)
 - [Implicit conversion might cause confusion: consider using 'explicit'](#tip11)
 - [Rvalue reference parameter is a lvalue](#tip12)
+- [Commas can be used in two ways: seperator and operator](#tip13)
 
 ## <a name='tip1'></a>Initializing std::vector with initializer-list always invokes copy constructor
 ```c++
@@ -430,5 +431,40 @@ int main()
 {
     // prints 'lvalue rvalue'
     test("Use std::move if your constructor should 'move' rvalue reference parameters");
+}
+```
+## <a name='tip13'></a>Commas can be used in two ways: seperator and operator
+```c++
+#include <iostream>
+
+void foo(double d)
+{
+    std::cout << d << std::endl;
+}
+
+void foo(int i, double d)
+{
+    std::cout << i << " " << d << std::endl;
+}
+
+int main()
+{
+    int i = 1;
+    double j = 2.2;
+    
+    // We usually use commas as seperators because
+    // not only do we intend that but also comma operators have one of the lowest priorities.
+    foo(i++, j += 1.1); // prints 3.3
+    
+    // But if we just put enough parenthesis to give a chance for a comma to be interpreted as an operator,
+    // the whole expression is turned into a sequential evaluation where the rightmost term is returned.
+    // The example below is idential to this:
+    //   i++;
+    //   j+=1.3;
+    //   std::cout << j << std::endl;
+    foo((i++, j += 1.1)); // prints 4.4
+    
+    // Note that the types of each expression doesn't have to be identical unlike ternary operator.
+    std::cout << (i++, j += 1.1) << std::endl; // prints 5.5
 }
 ```
