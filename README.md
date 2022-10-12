@@ -460,7 +460,7 @@ int main()
     // the whole expression is turned into a sequential evaluation where the rightmost term is returned.
     // The example below is idential to this:
     //   i++;
-    //   j+=1.3;
+    //   j+=1.1;
     //   std::cout << j << std::endl;
     foo((i++, j += 1.1)); // prints 4.4
     
