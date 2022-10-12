@@ -14,6 +14,7 @@ Collection of small tips and tricks for C++
 - [Implicit conversion might cause confusion: consider using 'explicit'](#tip11)
 - [Rvalue reference parameter is a lvalue](#tip12)
 - [Commas can be used in two ways: seperator and operator](#tip13)
+- [const keyword applies to the left token, unless it comes at the start](#tip14)
 
 ## <a name='tip1'></a>Initializing std::vector with initializer-list always invokes copy constructor
 ```c++
@@ -467,4 +468,23 @@ int main()
     // Note that the types of each expression doesn't have to be identical unlike ternary operator.
     std::cout << (i++, j += 1.1) << std::endl; // prints 5.5
 }
+```
+## <a name='tip14'></a>const keyword applies to the left token, unless it comes at the start
+```c++
+// Reading a type name from right to left helps understanding what it means
+const int* i1 = nullptr; // A pointer to an integer that is constant
+int const* i2 = nullptr; // A pointer to a constant integer (same as i1)
+const int* const i3 = nullptr; // A constant pointer to an integer that is constant
+int const* const i4 = nullptr; // A constant pointer to a constant integer (same as i3)
+
+// Only the leftmost const applies to the right token,
+// so both 'const's are decorating 'int'.
+// The example below DOES NOT mean "a pointer that is constant which points to an integer that is constant"
+// Rather, it is "a pointer to a constant integer that is constant".
+const int const* i5 = nullptr; // Error: duplicate 'const'
+
+// Unlike pointers, we cannot change what a reference variable is pointing at.
+// That means decorating a reference with const ('T& const') is unnecessary.
+// Actually, compilers prohibit declaring types interpreted as "a constant reference to ...".
+int& const v1 = 0; // Error: 'const' qualifiers cannot be applied to 'int&'
 ```
