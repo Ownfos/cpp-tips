@@ -1,6 +1,31 @@
 # cpp-tips
 Collection of small tips and tricks for C++
 
+## Introduction
+As a C++ user, I also had a hard time learning the rules and best practices of this awesome language.<br>
+There are so many things that we can do with it, but it doesn't come without costs: the notorious complexity and steep learning curve.
+
+I also had to struggle with many compiler errors which doesn't always point the problem directly,<br>
+and it took me so much time to figure out the details which were the core reasons for my error.<br>
+Although there are numerous tutorials suited for each level of proficiency,<br>
+I've discovered that the situation and requirements we face are simply uncountable that even these nice guides can't cover them all.<br>
+
+These kinds of practical informations or know-hows we earn by countless trial and error are hardly known to C++ beginners.<br>
+It also takes quite a long time to do so, therefore I couldn't just recommend others to learn it through experiences just like I did.<br>
+
+Thats exactly the reason why I chose to make this repository:<br>
+to share my experience with others so that they can solve different problems<br>
+they might face in the future with minimal effort and advance their skills.<br>
+
+I still highly appreciate learning through trial and error.<br>
+Making toy projects and surfing stackoverflow to solve each problem you face are precious experiences<br>
+that will let you stand on your own and face challenges you can overcome with some effort.<br>
+
+By the way, I highly recommend reading [c++ language reference](https://learn.microsoft.com/en-us/cpp/cpp/cpp-language-reference?view=msvc-170) created by Microsoft!<br>
+Beginners might not get much out of it, but intermediate users might find out<br>
+what they've missed or misunderstood while reading this document A-Z.
+
+## List of contents
 - [Initializing std::vector with initializer-list always invokes copy constructor](#tip1)
 - [const std::string& and std::string_view can also cause allocation](#tip2)
 - [Creating a lambda behaves the same as creating a struct with operator() overloaded](#tip3)
