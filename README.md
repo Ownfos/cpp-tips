@@ -486,5 +486,11 @@ const int const* i5 = nullptr; // Error: duplicate 'const'
 // Unlike pointers, we cannot change what a reference variable is pointing at.
 // That means decorating a reference with const ('T& const') is unnecessary.
 // Actually, compilers prohibit declaring types interpreted as "a constant reference to ...".
-int& const v1 = 0; // Error: 'const' qualifiers cannot be applied to 'int&'
+int& const i6 = 0; // Error: 'const' qualifiers cannot be applied to 'int&'
+const int& const i7 = 0; // Error: 'const' qualifiers cannot be applied to 'const int&'
+
+// By the way, pointer to a reference is illegal just like '& const' stuffs.
+int&* i8 = nullptr; // Error: cannot declare a pointer to 'int&'
 ```
+This [stackoverflow question](https://stackoverflow.com/questions/54359088/const-qualifiers-cannot-be-applied-to-stdvectorlong-unsigned-int) handles '& const' issue.<br>
+This [stackoverflow question](https://stackoverflow.com/questions/1898524/difference-between-pointer-to-a-reference-and-reference-to-a-pointer) explains more about '&*'
