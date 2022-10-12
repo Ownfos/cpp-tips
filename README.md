@@ -40,6 +40,7 @@ the features they've never knew or concepts which were misunderstood, while read
 - [Rvalue reference parameter is a lvalue](#tip12)
 - [Commas can be used in two ways: seperator and operator](#tip13)
 - [const keyword applies to the left token, unless it comes at the start](#tip14)
+- [Dynamic and static cast for smart pointers](#tip15)
 
 ## <a name='tip1'></a>Initializing std::vector with initializer-list always invokes copy constructor
 ```c++
@@ -519,3 +520,34 @@ int&* i8 = nullptr; // Error: cannot declare a pointer to 'int&'
 ```
 This [stackoverflow question](https://stackoverflow.com/questions/54359088/const-qualifiers-cannot-be-applied-to-stdvectorlong-unsigned-int) handles '& const' issue.<br>
 This [stackoverflow question](https://stackoverflow.com/questions/1898524/difference-between-pointer-to-a-reference-and-reference-to-a-pointer) explains more about '&*'
+## <a name='tip15'></a>Dynamic and static cast for smart pointers
+```
+// Still writing...
+
+
+#include <iostream>
+#include <memory>
+
+class A {
+public:
+    virtual ~A() = default; // We need at least one virtual function for dynamic_cast to work
+};
+class B : public A {};
+
+class C {};
+class D : public C {};
+
+int main()
+{
+    {
+        std::shared_ptr<A> pBase = std::make_shared<B>(); // Ok: usual upcasting
+        std::dynamic_pointer_cast<B>(pBase); // Ok: pBase is pointing at a complete object of B
+        std::dynamic_pointer_cast<C>(pBase); // Bad: the cast fails at runtime and nullptr is returned
+    }
+    {
+        std::shared_ptr<C> pBase = std::make_shared<D>(); // Ok: usual upcasting
+        std::static_pointer_cast<D>(pBase); // Ok: pBase is pointing at a complete object of D
+        std::static_pointer_cast<A>(pBase); // Error: invalid 'static_cast' from type D* to A*
+    }
+}
+```
