@@ -22,8 +22,8 @@ Making toy projects and surfing stackoverflow to solve each problem you face are
 that will let you stand on your own and face challenges you can overcome with some effort.<br>
 
 By the way, I highly recommend reading [c++ language reference](https://learn.microsoft.com/en-us/cpp/cpp/cpp-language-reference?view=msvc-170) created by Microsoft!<br>
-Beginners might not get much out of it, but intermediate users might find out<br>
-what they've missed or misunderstood while reading this document A-Z.
+Beginners might not get much out of it but I believe intermediate users would find out<br>
+the features they've never knew or concepts which were misunderstood, while reading this document from a to z.
 
 ## List of contents
 - [Initializing std::vector with initializer-list always invokes copy constructor](#tip1)
