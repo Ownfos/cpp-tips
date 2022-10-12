@@ -80,9 +80,9 @@ int main()
     
     /* This is thereby impossible because std::unique_ptr doesn't have a copy constructor.
     std::vector<std::unique_ptr<Test>> {
-        std::make_shared<Test>(1),
-        std::make_shared<Test>(2),
-        std::make_shared<Test>(3)
+        std::make_unique<Test>(1),
+        std::make_unique<Test>(2),
+        std::make_unique<Test>(3)
     };
     */
 }
