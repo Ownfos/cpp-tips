@@ -522,32 +522,54 @@ This [stackoverflow question](https://stackoverflow.com/questions/54359088/const
 This [stackoverflow question](https://stackoverflow.com/questions/1898524/difference-between-pointer-to-a-reference-and-reference-to-a-pointer) explains more about '&*'
 ## <a name='tip15'></a>Dynamic and static cast for smart pointers
 ```
-// Still writing...
-
-
 #include <iostream>
 #include <memory>
 
-class A {
+// Base1 and Derived1 are polymorphic.
+// Use std::dynamic_pointer_cast for such classes.
+class Base1
+{
 public:
-    virtual ~A() = default; // We need at least one virtual function for dynamic_cast to work
+    virtual ~Base1() = default; // We need at least one virtual function for dynamic_cast to work
 };
-class B : public A {};
+class Derived1 : public Base1 {};
 
-class C {};
-class D : public C {};
+// Base2 and Derived2 are not polymorphic.
+// Use std::static_pointer_cast for such classes.
+class Base2 {};
+class Derived2 : public Base2 {};
 
 int main()
 {
+    // Case 1) polymorphic class
     {
-        std::shared_ptr<A> pBase = std::make_shared<B>(); // Ok: usual upcasting
-        std::dynamic_pointer_cast<B>(pBase); // Ok: pBase is pointing at a complete object of B
-        std::dynamic_pointer_cast<C>(pBase); // Bad: the cast fails at runtime and nullptr is returned
+        std::shared_ptr<Base1> pBase = std::make_shared<Derived1>(); // Ok: usual upcasting
+        
+        // Cast to a relevant type
+        std::dynamic_pointer_cast<Derived1>(pBase); // Ok: pBase is pointing at a complete object of Derived1
+        std::static_pointer_cast<Derived1>(pBase); // Uhhh: this works because we know pBase poitns to a Derived1 instance
+
+        // Cast to an irrelevant type
+        std::dynamic_pointer_cast<Derived2>(pBase); // Bad: the cast fails at runtime and nullptr is returned
+        std::static_pointer_cast<Derived2>(pBase); // Error: invalid 'static_cast' from type Base1* to type Derived2*
+
+        // Wait, do we even need a downcast like dynamic_cast while we use polymorphism?
+        // In principle, your code should not depend on concrete class (i.e. derived class) but interface (i.e. base class).
+        // That means using dynamic_cast or std::dynamic_pointer_cast is also considered as a code smell!
+        // If you ever find yourself in such situation, try to redesign your class hierachy so that everything can be done without downcasting.
     }
+
+    // Case 2) nonpolymorphic class
     {
-        std::shared_ptr<C> pBase = std::make_shared<D>(); // Ok: usual upcasting
-        std::static_pointer_cast<D>(pBase); // Ok: pBase is pointing at a complete object of D
-        std::static_pointer_cast<A>(pBase); // Error: invalid 'static_cast' from type D* to A*
+        std::shared_ptr<Base2> pBase = std::make_shared<Derived2>(); // Ok: usual upcasting
+
+        // Cast to a relevant type
+        std::dynamic_pointer_cast<Derived2>(pBase); // Error: source type is not polymorphic
+        std::static_pointer_cast<Derived2>(pBase); // Ok: pBase is pointing at a complete object of Derived2
+
+        // Cast to an irrelevant type
+        std::dynamic_pointer_cast<Derived1>(pBase); // Error: source type is not polymorphic
+        std::static_pointer_cast<Derived1>(pBase); // Error: invalid 'static_cast' from type Base2* to type Derived1*
     }
 }
 ```
