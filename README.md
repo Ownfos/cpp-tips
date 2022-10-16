@@ -41,6 +41,7 @@ the features they've never knew or concepts which were misunderstood, while read
 - [Commas can be used in two ways: seperator and operator](#tip13)
 - [const keyword applies to the left token, unless it comes at the start](#tip14)
 - [Dynamic and static cast for smart pointers](#tip15)
+- [The reason why static_cast for downcast is unsafe](#tip16)
 
 ## <a name='tip1'></a>Initializing std::vector with initializer-list always invokes copy constructor
 ```c++
@@ -571,5 +572,78 @@ int main()
         std::dynamic_pointer_cast<Derived1>(pBase); // Error: source type is not polymorphic
         std::static_pointer_cast<Derived1>(pBase); // Error: invalid 'static_cast' from type Base2* to type Derived1*
     }
+}
+```
+## <a name='tip16'></a>The reason why static_cast for downcast is unsafe
+```c++
+#include <iostream>
+
+class Base
+{
+public:
+    Base(int baseMember)
+        : baseMember(baseMember)
+    {}
+
+    void foo()
+    {
+        std::cout << baseMember << std::endl;
+    }
+
+protected:
+    int baseMember;
+};
+
+class Derived : public Base
+{
+public:
+    Derived(int baseMember, int derivedMember)
+        : Base(baseMember), derivedMember(derivedMember)
+    {}
+
+    void goo()
+    {
+        std::cout << baseMember << ", " << derivedMember << std::endl;
+    }
+
+private:
+    int derivedMember;
+};
+
+void test(Base* pb)
+{
+    // This compiles without error because Base and Derived are in inheritance relation,
+    // however, we cannot assure that this is always a valid conversion.
+    // In case the object which the base pointer contains doesn't have a member or method we try to access,
+    // memory regions allocated to other objects could be 'invaded'.
+    Derived* pd = static_cast<Derived*>(pb);
+    pd->goo();
+}
+
+int main()
+{
+    // x86-64 gcc 12.2 was used to analyze the result, thanks to godbolt.org!
+    //
+    // Memory layout:
+    // ---- higher address ----
+    // d.derivedMember 12345 <- [rbp - 4]
+    // d.baseMember    5555  <- [rbp - 8]  (&d)
+    // b.baseMember    3333  <- [rbp - 12] (&b)
+    //                       <- [rsp] (i.e. the top of the stack)
+    // ---- lower address ----
+    //
+    // Note that baseMember has an offset of 0, while derivedMember has +4.
+    Derived d(5555, 12345);
+    Base b(3333);
+
+    // Called with address [rbp - 8]:
+    // 1. goo() assumes that pd->baseMember is at [rbp - 8] (valid: accessing d.baseMember)
+    // 2. goo() assumes that pd->derivedMember is at [rbp - 4] (valid: accessing d.derivedMember)
+    test(&d); // prints 5555, 12345
+
+    // Called with address [rbp - 12]:
+    // 1. goo() assumes that pd->baseMember is at [rbp - 12] (valid: accessing b.baseMember)
+    // 2. goo() assumes that pd->derivedMember is at [rbp - 8] (INVALID: thats the address for d.baseMember!)
+    test(&b); // prints 3333, 5555
 }
 ```
