@@ -678,6 +678,11 @@ int main()
     {
         goto case2;
     }
+    else
+    {
+        goto exit;
+    }
+    
 case1:
     {
         std::string msg = "Hello, world!";
