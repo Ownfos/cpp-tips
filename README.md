@@ -42,6 +42,7 @@ the features they've never knew or concepts which were misunderstood, while read
 - [const keyword applies to the left token, unless it comes at the start](#tip14)
 - [Dynamic and static cast for smart pointers](#tip15)
 - [The reason why static_cast for downcast is unsafe](#tip16)
+- [Declaring variables inside a switch statement](#tip17)
 
 ## <a name='tip1'></a>Initializing std::vector with initializer-list always invokes copy constructor
 ```c++
@@ -647,3 +648,49 @@ int main()
     test(&b); // prints 3333, 5555
 }
 ```
+## <a name='tip17'></a>Declaring variables inside a switch statement
+```c++
+#include <iostream>
+
+int main()
+{
+    int val = 2;
+
+    // Switch-case version
+    switch(val)
+    {
+    case 1:
+    {
+        std::string msg = "Hello, world!"; // invalid without scoping the 'case' clause
+        std::cout << msg;
+    }
+    case 2:
+        std::cout << "Goodbye, world!";
+    }
+
+
+    // Goto version
+    if (val == 1)
+    {
+        goto case1;
+    }
+    else if (val == 1)
+    {
+        goto case2;
+    }
+case1:
+    {
+        std::string msg = "Hello, world!";
+        std::cout << msg;
+    }
+case2:
+    std::cout << "Goodbye, world!";
+    // Imagine what would have happened if the compiler allowed declaration of 'msg' without our extra scope
+    // and we tried to execute codes like 'std::cout << msg' right here.
+    // That would have caused skipping initialization of the variable 'msg'!
+    // For the same reason, goto statement also prohibits varaible declaration between labels.
+exit:
+    return 0;
+}
+```
+Further details can be found in this [stackoverflow question](https://stackoverflow.com/questions/92396/why-cant-variables-be-declared-in-a-switch-statement)
