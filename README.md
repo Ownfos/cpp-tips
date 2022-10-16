@@ -662,10 +662,12 @@ int main()
     case 1:
     {
         std::string msg = "Hello, world!"; // invalid without scoping the 'case' clause
-        std::cout << msg;
+        std::cout << msg << std::endl;
+        break;
     }
     case 2:
-        std::cout << "Goodbye, world!";
+        std::cout << "Goodbye, world!" << std::endl;
+        break;
     }
 
 
@@ -674,7 +676,7 @@ int main()
     {
         goto case1;
     }
-    else if (val == 1)
+    else if (val == 2)
     {
         goto case2;
     }
@@ -682,16 +684,17 @@ int main()
     {
         goto exit;
     }
-    
 case1:
     {
         std::string msg = "Hello, world!";
-        std::cout << msg;
+        std::cout << msg << std::endl;
+        goto exit;
     }
 case2:
-    std::cout << "Goodbye, world!";
+    std::cout << "Goodbye, world!" << std::endl;
+    goto exit;
     // Imagine what would have happened if the compiler allowed declaration of 'msg' without our extra scope
-    // and we tried to execute codes like 'std::cout << msg' right here.
+    // and we tried to execute codes like 'std::cout << msg.size()' right here.
     // That would have caused skipping initialization of the variable 'msg'!
     // For the same reason, goto statement also prohibits varaible declaration between labels.
 exit:
