@@ -521,7 +521,7 @@ int&* i8 = nullptr; // Error: cannot declare a pointer to 'int&'
 This [stackoverflow question](https://stackoverflow.com/questions/54359088/const-qualifiers-cannot-be-applied-to-stdvectorlong-unsigned-int) handles '& const' issue.<br>
 This [stackoverflow question](https://stackoverflow.com/questions/1898524/difference-between-pointer-to-a-reference-and-reference-to-a-pointer) explains more about '&*'
 ## <a name='tip15'></a>Dynamic and static cast for smart pointers
-```
+```c++
 #include <iostream>
 #include <memory>
 
