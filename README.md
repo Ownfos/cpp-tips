@@ -41,8 +41,9 @@ the features they've never knew or concepts which were misunderstood, while read
 - [Commas can be used in two ways: seperator and operator](#tip13)
 - [const keyword applies to the left token, unless it comes at the start](#tip14)
 - [Dynamic and static cast for smart pointers](#tip15)
-- [The reason why static_cast for downcast is unsafe](#tip16)
+- [The reason why using static_cast for downcast is unsafe](#tip16)
 - [Declaring variables inside a switch statement](#tip17)
+- [The meaning of qualified name and unqualified access](#tip18)
 
 ## <a name='tip1'></a>Initializing std::vector with initializer-list always invokes copy constructor
 ```c++
@@ -575,7 +576,7 @@ int main()
     }
 }
 ```
-## <a name='tip16'></a>The reason why static_cast for downcast is unsafe
+## <a name='tip16'></a>The reason why using static_cast for downcast is unsafe
 ```c++
 #include <iostream>
 
@@ -702,3 +703,25 @@ exit:
 }
 ```
 Further details can be found in this [stackoverflow question](https://stackoverflow.com/questions/92396/why-cant-variables-be-declared-in-a-switch-statement)
+## <a name='tip18'></a>The meaning of qualified name and unqualified access
+```c++
+
+// Qualified name is a full name which includes an idendifier's namespace or class name.
+// Qualified access means we specify the idendifier by its full name (e.g. std::vector).
+// Unqualified access, in the other hand, means that we omit some parts of the qualified name while we specify an identifier.
+// This is possible in some places like nested namespace or a region after using namespace ~ statement is used.
+namespace Toolbox
+{
+    // The qualified name (i.e. the full name) for this function is Toolbox::three.
+    int three() { return 3; }
+
+    namespace Math
+    {
+        // The qualified name for this function is Toolbox::Math::triple.
+        // Since Math is a nested namespace, everything declared in the parent namespace 'Toolbox'
+        // can be accessed without qualifiers (i.e. unqualified access).
+        // This means that instead of Toolbox::three(), we can simply write three().
+        int triple(int val) { return val * three(); }
+    }
+};
+```
