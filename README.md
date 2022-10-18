@@ -708,7 +708,7 @@ Further details can be found in this [stackoverflow question](https://stackoverf
 
 // Qualified name is a full name which includes an idendifier's namespace or class name.
 // Qualified access means we specify the idendifier by its full name (e.g. std::vector).
-// Unqualified access, in the other hand, means that we omit some parts of the qualified name while we specify an identifier.
+// Unqualified access, on the other hand, means that we omit some parts of the qualified name while we specify an identifier.
 // This is possible in some places like nested namespace or a region after using namespace ~ statement is used.
 namespace Toolbox
 {
