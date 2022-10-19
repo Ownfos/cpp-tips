@@ -770,6 +770,7 @@ Test.h
 /*extern*/ int case1 = 1234; // external linkage
 
 // 'static' keyword makes variables on global scope internal.
+// Declaring a variable inside an anonymous namespace does the same job.
 static int case2 = 1234; // internal linkage
 
 // 'static inline' doesn't let variables have internal linkage unlike 'static',
@@ -778,7 +779,8 @@ static inline int case3 = 1234; // external linkage
 
 // Global functions are external by default.
 // ODR violation if multiple translation units include this header file using #include.
-// Same caution as global variables: do not define the body of a global function inside a header file.
+// Do not define the body of a global function inside a header file.
+// If you ever need to, consider using static function or moving it into an anonymouse namespace.
 int case4() // external linkage
 {
     return 1234;
@@ -830,13 +832,16 @@ int External::case6()
 // Anonymous namespace makes symbols declared inside have internal linkage.
 namespace
 {
+    // Same as writing 'static int case10 = 1234' on a global scope.
     int case10 = 1234; // internal linkage
     
+    // Same as writing 'static int case11() { ... }' on a global scope.
     int case11() // internal linkage
     {
         return 1234;
     }
 
+    // Note: 'inline' keyword cannot be applied to a class definition (i.e. 'inline class' is not valid)
     class Internal // internal linkage
     {
     public:
