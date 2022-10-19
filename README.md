@@ -821,7 +821,7 @@ private:
 
 // ODR violation if multiple translation units include this header file using #include.
 // Unlike External::case7, External::case6 is not an inline member function.
-// These kinds of definitions should go to the corresponding implementation file (e.g. External.cpp).
+// These kinds of definitions should come at the corresponding implementation file (e.g. External.cpp).
 int External::case6()
 {
     return 1234;
