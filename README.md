@@ -44,6 +44,7 @@ the features they've never knew or concepts which were misunderstood, while read
 - [The reason why using static_cast for downcast is unsafe](#tip16)
 - [Declaring variables inside a switch statement](#tip17)
 - [The meaning of qualified name and unqualified access](#tip18)
+- [External linkage vs internal linkage (with examples)](#tip19)
 
 ## <a name='tip1'></a>Initializing std::vector with initializer-list always invokes copy constructor
 ```c++
@@ -296,13 +297,37 @@ class IDGenerator
 {
 private:
     // Valid from C++17.
+    //
+    // Specifying 'inline' can be thought as telling the compiler that
+    // we are going to violate ODR but in a gentle way (same definition everywhere),
+    // so you should pick one and use it as if it were declared only once.
+    //
+    // Though 'inline' keyword doesn't always make things have external linkage,
+    // it is usually involved with symbols which are external (e.g. static inline global variables, inline member functions, ...)
+    //
     // Note that 'inline static' and 'static inline' have same effect,
     // but the latter is prefered because 'static' is a storage class specifier
     // and C standard says that such keywords should come first.
-    static inline int nextID = 0; 
+    //
+    // Static member variables have external linkage if a class has external linkage.
+    // Classes are external by default, but anonymous namespace can makes things internal.
+    // That means static data members can have internal linkage
+    // if a class is declared inside an anonymouse namespace (i.e. has internal linkage).
+    static inline int nextID = 0;
 };
+
+// An anonymouse namespace
+namespace
+{
+    class Test // internal linkage
+    {
+    public:
+        static inline int test = 1234; // internal linkage
+    };
+}
 ```
-Checkout this [stackoverflow question](https://stackoverflow.com/questions/61714110/static-inline-vs-inline-static) for more information on 'inline static' vs 'static inline'.
+Checkout this [stackoverflow question](https://stackoverflow.com/questions/61714110/static-inline-vs-inline-static) for more information on 'inline static' vs 'static inline'.<br>
+This [stackoverflow question](https://stackoverflow.com/questions/16386256/inline-functions-and-external-linkage), on the other hand, will help you distinguish  'inline' and 'external linkage'.
 ## <a name='tip8'></a>Mimic 'named parameter' for function calls like other languages
 ```c++
 struct Args
@@ -705,7 +730,6 @@ exit:
 Further details can be found in this [stackoverflow question](https://stackoverflow.com/questions/92396/why-cant-variables-be-declared-in-a-switch-statement)
 ## <a name='tip18'></a>The meaning of qualified name and unqualified access
 ```c++
-
 // Qualified name is a full name which includes an idendifier's namespace or class name.
 // Qualified access means we specify the idendifier by its full name (e.g. std::vector).
 // Unqualified access, on the other hand, means that we omit some parts of the qualified name while we specify an identifier.
@@ -725,3 +749,102 @@ namespace Toolbox
     }
 };
 ```
+## <a name='tip19'></a>External linkage vs internal linkage (with examples)
+Test.h
+```c++
+// External linkage:
+//     A symbol declared in one translation unit is visible to other translation units.
+//     An external variable has same value in every translation unit.
+//     Think of it as having one instance per program.
+//
+// Internal linkage:
+//     A symbol is visible only to the translation unit where it was declared.
+//     An internal variable might have different values in different translation unit.
+//     Think of it as having one instance per translation unit.
+
+
+// Global variables are external by default.
+// ODR violation if multiple translation units include this header file using #include.
+// If you ever have to, just declare the variable with 'extern' keyword
+// and define it once in a single translation unit (without 'extern' keyword).
+/*extern*/ int case1 = 1234; // external linkage
+
+// 'static' keyword makes variables on global scope internal.
+static int case2 = 1234; // internal linkage
+
+// 'static inline' doesn't let variables have internal linkage unlike 'static',
+// but it makes defining global variables in a header file possible.
+static inline int case3 = 1234; // external linkage
+
+// Global functions are external by default.
+// ODR violation if multiple translation units include this header file using #include.
+// Same caution as global variables: do not define the body of a global function inside a header file.
+int case4() // external linkage
+{
+    return 1234;
+}
+
+// Again, 'static' keyword makes it have internal linkage, just like the global variable did.
+static int case5()
+{
+    return 1234;
+}
+
+// Classes are external unless declared inside an anonymous namespace.
+class External // external linkage
+{
+public:
+    // Member functions have external linkage by default.
+    int case6(); // external linkage
+    
+    // Member functions defined inside a class definition (i.e. inline member functions) are inline by default.
+    // This makes definition of a function body in a header file possible.
+    /*inline*/ int case7() // external linkage
+    {
+        return 1234;
+    }
+
+    // Static member variables of a class with external linkage is also external.
+    static inline int case8 = 1234; // external linkage
+
+private:
+    // It doesn't make much sense to talk about linkage of non-static member variables.
+    // They are discussed on instance level not translation unit level.
+    //
+    // Think of these two declarations in a header file:
+    //     extern External e1;
+    //     static External e2;
+    // Does case9 have internal linkage or external linkage?
+    // Well, e1 is external and e2 is internal, so neither can be the answer!
+    int case9 = 1234;
+};
+
+// ODR violation if multiple translation units include this header file using #include.
+// Unlike External::case7, External::case6 is not an inline member function.
+// These kinds of definitions should go to the corresponding implementation file (e.g. External.cpp).
+int External::case6()
+{
+    return 1234;
+}
+
+// Anonymous namespace makes symbols declared inside have internal linkage.
+namespace
+{
+    int case10 = 1234; // internal linkage
+    
+    int case11() // internal linkage
+    {
+        return 1234;
+    }
+
+    class Internal // internal linkage
+    {
+    public:
+        // Static member variables of a class with internal linkage are also internal.
+        static inline int case12 = 1234; // internal linkage
+    };
+}
+```
+Linkage of member variables is discussed in this [stackoverflow question](https://stackoverflow.com/questions/46103512/do-member-variables-have-external-linkage).<br>
+The 'static data member' section of this [cppreference page](https://en.cppreference.com/w/cpp/language/static) explains the linkage of static member variables.<br>
+This [stackoverflow question](https://stackoverflow.com/questions/154469/unnamed-anonymous-namespaces-vs-static-functions) handles discussion about static function vs functions inside anonymous namespace.
