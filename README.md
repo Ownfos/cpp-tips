@@ -756,6 +756,7 @@ Test.h
 //     A symbol declared in one translation unit is visible to other translation units.
 //     An external variable has same value in every translation unit.
 //     Think of it as having one instance per program.
+//     Symbols with external linkage should obey ODR (One Definition Rule).
 //
 // Internal linkage:
 //     A symbol is visible only to the translation unit where it was declared.
@@ -793,6 +794,7 @@ static int case5()
 }
 
 // Classes are external unless declared inside an anonymous namespace.
+// Though they have external linkage, defining classes inside a header file doesn't seem to violate ODR.
 class External // external linkage
 {
 public:
