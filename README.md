@@ -13,7 +13,7 @@ I've discovered that the situation and requirements we face are simply uncountab
 These kinds of practical informations or know-hows we earn by countless trial and error are hardly known to C++ beginners.<br>
 It also takes quite a long time to do so, therefore I couldn't just recommend others to learn it through experiences just like I did.<br>
 
-Thats exactly the reason why I chose to make this repository:<br>
+That's exactly the reason why I chose to make this repository:<br>
 to share my experience with others so that they can solve different problems<br>
 they might face in the future with minimal effort and advance their skills.<br>
 
