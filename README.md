@@ -2,7 +2,7 @@
 Collection of small tips and tricks for C++
 
 ## Introduction
-As a C++ user, I also had a hard time learning the rules and best practices of this awesome language.<br>
+As a C++ user, I had a hard time learning the rules and best practices of this awesome language.<br>
 There are so many things that we can do with it, but it doesn't come without costs: the notorious complexity and steep learning curve.
 
 I also had to struggle with many compiler errors which doesn't always point the problem directly,<br>
