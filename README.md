@@ -45,6 +45,7 @@ the features they've never knew or concepts which were misunderstood, while read
 - [Declaring variables inside a switch statement](#tip17)
 - [The meaning of qualified name and unqualified access](#tip18)
 - [External linkage vs internal linkage (with examples)](#tip19)
+- [Structured binding](#tip20)
 
 ## <a name='tip1'></a>Initializing std::vector with initializer-list always invokes copy constructor
 ```c++
@@ -855,3 +856,79 @@ namespace
 Linkage of member variables is discussed in this [stackoverflow question](https://stackoverflow.com/questions/46103512/do-member-variables-have-external-linkage).<br>
 The 'static data member' section of this [cppreference page](https://en.cppreference.com/w/cpp/language/static) explains the linkage of static member variables.<br>
 This [stackoverflow question](https://stackoverflow.com/questions/154469/unnamed-anonymous-namespaces-vs-static-functions) handles discussion about static function vs functions inside anonymous namespace.
+## <a name='tip20'></a>Structured binding
+```c++
+#include <iostream>
+#include <string>
+#include <tuple>
+#include <map>
+
+using namespace std::string_literals;
+
+struct CustomType
+{
+    int i;
+    double d;
+};
+
+// Warning: this example is solely dedicated to demonstrating the structured binding feature.
+// Try to use a struct instead of a tuple if returning multiple values is needed.
+// Tuple elements do not have a name, which makes the values hard to understand without looking at the description.
+// Structs, on the other hand, have named member variables which are quite self-explanatory.
+auto getStudentInfo()
+{
+    auto age = 17;
+    auto height = 175.3;
+    auto name = "Jack"s;
+
+    return std::tuple{age, height, name};
+}
+
+int main()
+{
+    // Structured binding enhances readability by giving names
+    // to elements of an aggregate objects like key-value pair.
+    {
+        auto m = std::map<int, double>{{1, 1.11}, {2, 2.22}};
+
+        // Double the values of m.
+        std::cout << "Basic for loop using iterator:" << std::endl;
+        for (auto it = m.begin(); it != m.end(); ++it)
+        {
+            std::cout << "changing m[" << it->first << "] to " << it->second * 2 << std::endl;
+            it->second *= 2;
+        }
+
+        // Do the same thing using structured binding.
+        std::cout << "Range-based for loop using structured binding:" << std::endl;
+        for (auto& [key, value] : m)
+        {
+            std::cout << "changing m[" << key << "] to " << value * 2 << std::endl;
+            value *= 2;
+        }
+    }
+
+    // Structured binding can be used to give names to tuple elements
+    {
+        auto [age, height, name] = getStudentInfo();
+        std::cout << "name: " << name << ", age: " << age << ", height: " << height << std::endl;
+    }
+
+    // It also works on custom types!
+    {
+        auto [numItems, totalWeight] = CustomType{33, 99.0};
+        std::cout << "number of items: " << numItems << ", avg weight: " << totalWeight / numItems << std::endl;
+    }
+}
+```
+Expected output:
+```
+Basic for loop using iterator:
+changing m[1] to 2.22
+changing m[2] to 4.44
+Range-based for loop using structured binding:
+changing m[1] to 4.44
+changing m[2] to 8.88
+name: Jack, age: 17, height: 175.3
+number of items: 33, avg weight: 3
+```
