@@ -48,6 +48,7 @@ the features they've never knew or concepts which were misunderstood, while read
 - [Structured binding](#tip20)
 - [How to initialize a reference member (ft. member initializer list)](#tip21)
 - [Using nested symbol of a template type as a typename](#tip22)
+- [Template argument decution (ft. std::forward and universal reference)](#tip23)
 
 ## <a name='tip1'></a>Initializing std::vector with initializer-list always invokes copy constructor
 ```c++
@@ -1030,5 +1031,125 @@ int main()
     static_assert(i == 123);
     static_assert(d == 123.0);
     static_assert(haha == 1234);
+}
+```
+## <a name='tip23'></a>Template argument decution (ft. std::forward and universal reference)
+```c++
+// Still cleaning up the mess...
+
+#include <type_traits>
+
+template<typename T>
+void test(T param) {}
+
+template<typename T>
+void testR(T& param) {}
+
+template<typename T>
+void testCR(const T& param) {}
+
+template<typename T>
+void testUR(T&& param) {}
+
+// Add & at the type
+template<typename T>
+using R = T&;
+
+// Add && at the type
+template<typename T>
+using RR = T&&;
+
+// Get the return type of std::forward on instance of type T
+template<typename T>
+using forwardType = decltype(std::forward<T>(std::declval<T>()));
+
+// Get the return type of std::move on instance of type T
+template<typename T>
+using moveType = decltype(std::move<T>(std::declval<T>()));
+
+int main()
+{
+    // Reference collapsing
+    {
+        static_assert(std::is_same_v<R<int&>, int&>);    // T& &   -> T&
+        static_assert(std::is_same_v<R<int&&>, int&>);   // T&& &  -> T&
+        static_assert(std::is_same_v<RR<int&>, int&>);   // T& &&  -> T&
+        static_assert(std::is_same_v<RR<int&&>, int&&>); // T&& && -> T&&
+    }
+
+    // std::forward performs static_cast<T&&>, using the last two reference collapsing rules.
+    {
+        static_assert(std::is_same_v<forwardType<int&>, int&>);
+        static_assert(std::is_same_v<forwardType<int&&>, int&&>);
+        static_assert(std::is_same_v<forwardType<const int&>, const int&>);
+        static_assert(std::is_same_v<forwardType<const int&&>, const int&&>);
+    }
+
+    // std::move makes everything && without touching const qualifier
+    {
+        static_assert(std::is_same_v<moveType<int&>, int&&>);
+        static_assert(std::is_same_v<moveType<int&&>, int&&>);
+        static_assert(std::is_same_v<moveType<const int&>, const int&&>);
+        static_assert(std::is_same_v<moveType<const int&&>, const int&&>);
+    }
+
+    // Lets see how template functions declared with parameter type as T, T&, const T&, and T&&
+    // deduce the type of parameter i when variables with various const reference qualifiers are passed.
+    int i = 1;
+    const int ci = 1;
+    int& ri = i;
+    const int& cri = ci;
+
+    // test(T param): strips all consts and references
+    {
+        test(1); // int
+        test(i); // int
+        test(ri); // int
+        test(ci); // int
+        test(cri); // int
+        test(std::move(i)); // int
+        test(std::move(ri)); // int
+        test(std::move(ci)); // int
+        test(std::move(cri)); // int
+    }
+
+    // testR(T& param): accepts everything as reference without changing const qualifier, but rejects rvalue
+    {
+        //testR(1); // Error: passing rvalue of type int as lvalue reference of type int&
+        testR(i); // int&
+        testR(ri); // int&
+        testR(ci); // const int&
+        testR(cri); // const int&
+        //testR(std::move(i)); // Error: passing rvalue of type int as lvalue reference of type int&
+        //testR(std::move(ri)); // Error: passing rvalue of type int as lvalue reference of type int&
+        testR(std::move(ci)); // const int&
+        testR(std::move(cri)); // const int&
+    }
+
+    // testCR(const T& param): makes everything const reference
+    {
+        testCR(1); // const int&
+        testCR(i); // const int&
+        testCR(ri); // const int&
+        testCR(ci); // const int&
+        testCR(cri); // const int&
+        testCR(std::move(i)); // const int&
+        testCR(std::move(ri)); // const int&
+        testCR(std::move(ci)); // const int&
+        testCR(std::move(cri)); // const int&
+    }
+    
+    // testUR(T&& param): what we pass is what we get! (T&& is called the 'universal reference')
+    {
+        testUR(1); // int&&
+        testUR(i); // int&
+        testUR(ri); // int&
+        testUR(ci); // const int&
+        testUR(cri); // const int&
+        testUR(std::move(i)); // int&&
+        testUR(std::move(ri)); // int&&
+        testUR(std::move(ci)); // const int&&
+        testUR(std::move(cri)); // const int&&
+    }
 }
 ```
