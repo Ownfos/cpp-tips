@@ -46,6 +46,7 @@ the features they've never knew or concepts which were misunderstood, while read
 - [The meaning of qualified name and unqualified access](#tip18)
 - [External linkage vs internal linkage (with examples)](#tip19)
 - [Structured binding](#tip20)
+- [How to initialize a reference member (ft. member initializer list)](#tip21)
 
 ## <a name='tip1'></a>Initializing std::vector with initializer-list always invokes copy constructor
 ```c++
@@ -932,3 +933,48 @@ changing m[2] to 8.88
 name: Jack, age: 17, height: 175.3
 number of items: 33, avg weight: 3
 ```
+## <a name='tip21'></a>How to initialize a reference member (ft. member initializer list)
+```c++
+struct Device {};
+
+struct Renderer
+{
+    // Note: using reference type for member variables has several downsides.
+    // 1. We can't perform assignment without copying the referenced object.
+    //    - 'ref = otherRef' does NOT change what 'ref' points to (it invokes copy assignment)
+    // 2. We can't use a default constructor.
+    //    - 'int& i;' is invalid (alias to nothing doesn't make sense)
+    //
+    // Since this topic is too heavy for a single comment block,
+    // I'll leave a link below for those who want further information.
+    Device& device;
+
+    // Member variables are initialized before we reach the first line of a constructor.
+    // This means that '=' inside a constructor implies an assignment.
+    //
+    // Since default initialization is not available for reference type,
+    // we need another place to perform initialization prior to the function body.
+    //
+    // That's where 'member initializer list' comes into play.
+    // Things written here are executed before the constructor body.
+    Renderer(Device& device)
+        : device(device) // This section is the member initializer list.
+    {}
+    
+    /*
+    Renderer(Device& device) // Error: uninitialized reference member ('Device& Renderer::device' should be initialized)
+    {
+        // The line below isn't an initialization; it copies 'device' into 'this->device'!
+        // Considering that reference types are used to avoid copying, this behavior is hardly intended.
+        this->device = device; 
+    }
+    */
+};
+
+int main()
+{
+    Device d;
+    Renderer r(d);
+}
+```
+['References, simply' by Herb Sutter](https://herbsutter.com/2020/02/23/references-simply/) for deeper analysis and guidelines about reference type.
