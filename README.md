@@ -47,6 +47,7 @@ the features they've never knew or concepts which were misunderstood, while read
 - [External linkage vs internal linkage (with examples)](#tip19)
 - [Structured binding](#tip20)
 - [How to initialize a reference member (ft. member initializer list)](#tip21)
+- [Using nested symbol of a template type as a typename](#tip22)
 
 ## <a name='tip1'></a>Initializing std::vector with initializer-list always invokes copy constructor
 ```c++
@@ -978,3 +979,56 @@ int main()
 }
 ```
 ['References, simply' by Herb Sutter](https://herbsutter.com/2020/02/23/references-simply/) for deeper analysis and guidelines about reference type.
+## <a name='tip22'></a>Using nested symbol of a template type as a typename
+```c++
+struct Int
+{
+    using Something = int;
+};
+
+struct Double
+{
+    using Something = double;
+};
+
+struct Haha
+{
+    static constexpr int Something = 1234;
+};
+
+// T::Something can be either a type or a non-type (e.g. static member variable):
+//   Int::Something  -> int
+//   Haha::Something -> compile time constant integer of value 1234.
+//
+// To distinguish type and non-type usage:
+// 1. specify 'typename' if a scoped name of a template type like T::Something should be interpreted as a type.
+// 2. do not specify 'typename' if a scoped name of a template type is non-type.
+template<typename T>
+constexpr auto asType()
+{
+    return typename T::Something{123};
+}
+
+template<typename T>
+constexpr auto asNonType()
+{
+    return T::Something;
+}
+
+int main()
+{
+    /*
+    asNonType<Int>(); // Error: dependent-name T::Something is parsed as a non-type
+    asNonType<Double>(); // Error: dependent-name T::Something is parsed as a non-type
+    asType<Haha>(); // Error: no type named 'Something' in 'struct Haha'
+`   */
+
+    constexpr auto i = asType<Int>();
+    constexpr auto d = asType<Double>();
+    constexpr auto haha = asNonType<Haha>();
+
+    static_assert(i == 123);
+    static_assert(d == 123.0);
+    static_assert(haha == 1234);
+}
+```
