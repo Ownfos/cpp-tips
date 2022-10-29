@@ -49,6 +49,7 @@ the features they've never knew or concepts which were misunderstood, while read
 - [How to initialize a reference member (ft. member initializer list)](#tip21)
 - [Using nested symbol of a template type as a typename](#tip22)
 - [Template argument decution (ft. std::forward and universal reference)](#tip23)
+- [Perfect forwarding in a lambda](#tip24)
 
 ## <a name='tip1'></a>Initializing std::vector with initializer-list always invokes copy constructor
 ```c++
@@ -1153,3 +1154,44 @@ int main()
     }
 }
 ```
+## <a name='tip24'></a>Perfect forwarding in a lambda
+```c++
+#include <string>
+
+using namespace std::string_literals;
+
+constexpr int LValRef = 1;
+constexpr int RValRef = 2;
+
+constexpr int foo(const std::string&)
+{
+    return LValRef;
+}
+
+constexpr int foo(std::string&&)
+{
+    return RValRef;
+}
+
+int main()
+{
+    // Method 1) generic lambda (c++14)
+    auto lambda1 = [](auto&& str) {
+        // return foo(std::forward(str)); // Error: template argument deduction/substitution failed
+        return foo(std::forward<decltype(str)>(str));
+    };
+
+    // Method 2) template lambda (c++20)
+    auto lambda2 = []<typename T>(T&& str) {
+        // return foo(std::forward(str)); // Error: template argument deduction/substitution failed
+        return foo(std::forward<T>(str));
+    };
+
+    auto str = "Hello, world!"s;
+    static_assert(lambda1(str) == LValRef);
+    static_assert(lambda2(str) == LValRef);
+    static_assert(lambda1(std::move(str)) == RValRef);
+    static_assert(lambda2(std::move(str)) == RValRef);
+}
+```
+Although generic and template lambda serve similar purpose, template lambda was introduced for [several reasons](https://stackoverflow.com/questions/54126204/what-is-the-need-of-template-lambda-introduced-in-c20-when-c14-already-has-g)
