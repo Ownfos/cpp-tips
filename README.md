@@ -50,6 +50,7 @@ the features they've never knew or concepts which were misunderstood, while read
 - [Using nested symbol of a template type as a typename](#tip22)
 - [Template argument decution (ft. std::forward and universal reference)](#tip23)
 - [Perfect forwarding in a lambda](#tip24)
+- [Three ways of overloading binary operators](#tip25)
 
 ## <a name='tip1'></a>Initializing std::vector with initializer-list always invokes copy constructor
 ```c++
@@ -1195,3 +1196,34 @@ int main()
 }
 ```
 Although generic and template lambda serve similar purpose, template lambda was introduced for [several reasons](https://stackoverflow.com/questions/54126204/what-is-the-need-of-template-lambda-introduced-in-c20-when-c14-already-has-g)
+## <a name='tip25'></a>Three ways of overloading binary operators
+```c++
+struct Int
+{
+    int val;
+
+    // Case 1) member function
+    constexpr Int operator+(const Int& other) const
+    {
+        return { val + other.val };
+    }
+
+    // Case 2) global function with access to private members
+    friend constexpr Int operator-(const Int& lhs, const Int& rhs)
+    {
+        return { lhs.val - rhs.val };
+    }
+};
+
+// Case 3) global function with access to public members only
+constexpr bool operator==(const Int& lhs, const Int& rhs)
+{
+    return lhs.val == rhs.val;
+}
+
+int main()
+{
+    static_assert(Int{2} + Int{3} == Int{5});
+    static_assert(Int{2} - Int{3} == Int{-1});
+}
+```
