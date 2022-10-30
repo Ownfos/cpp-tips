@@ -1339,4 +1339,4 @@ int main()
     sb.reset(); // ~Derived ~Base
 }
 ```
-There's a short [Article](https://blog.the-pans.com/why-you-dont-need-virtual-destructor-with-smart-pointers/) about smart pointers working well without virtual destructor
+There's a short [article](https://blog.the-pans.com/why-you-dont-need-virtual-destructor-with-smart-pointers/) about smart pointers working well without virtual destructor
