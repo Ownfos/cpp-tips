@@ -51,6 +51,10 @@ the features they've never knew or concepts which were misunderstood, while read
 - [Template argument decution (ft. std::forward and universal reference)](#tip23)
 - [Perfect forwarding in a lambda](#tip24)
 - [Three ways of overloading binary operators](#tip25)
+- [Polymorphism without runtime overhead (ft. CRTP)](#tip26)
+
+## Not C++ specific but useful documents
+- [How should I reuse codes if some of the concrete classes doesn't share same behavior?](https://softwareengineering.stackexchange.com/questions/246273/code-re-use-in-c-via-multiple-inheritance-or-composition-or)
 
 ## <a name='tip1'></a>Initializing std::vector with initializer-list always invokes copy constructor
 ```c++
@@ -1225,5 +1229,71 @@ int main()
 {
     static_assert(Int{2} + Int{3} == Int{5});
     static_assert(Int{2} - Int{3} == Int{-1});
+}
+```
+## <a name='tip26'></a>Polymorphism without runtime overhead (ft. CRTP)
+```c++
+#include <iostream>
+#include <memory>
+
+// Polymorphism through virtual function
+class Base
+{
+public:
+    virtual void foo() const = 0;
+};
+
+class Derived : public Base
+{
+public:
+    void foo() const override
+    {
+        std::cout << "runtime polymorphism" << std::endl;
+    }
+};
+
+// Polymorphism-ish behavior by passing derived class as template parameter
+// This kind of inheritance pattern is called the CRTP (Curiously Recurring Template Pattern)
+template<typename T>
+class CRPTBase
+{
+public:
+    void foo() const
+    {
+        static_cast<const T*>(this)->foo();
+    }
+};
+
+class CRPTDerived : public CRPTBase<CRPTDerived>
+{
+public:
+    void foo() const
+    {
+        std::cout << "compile time polymorphism" << std::endl;
+    }
+};
+
+// The underlying instance is determined at runtime.
+// Virtual function table is used to determine which foo to use.
+void test(const Base& b)
+{
+    b.foo();
+}
+
+// Since T is given at compile time, there is no need for vtable lookup or any kind of runtime check.
+// The downside is that we should use templates everywhere in order to utilize this trick.
+template<typename T>
+void test(const CRPTBase<T>& b)
+{
+    b.foo();
+}
+
+int main()
+{
+    Derived d1;
+    CRPTDerived d2;
+
+    test(d1);
+    test(d2);
 }
 ```
