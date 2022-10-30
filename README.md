@@ -52,6 +52,7 @@ the features they've never knew or concepts which were misunderstood, while read
 - [Perfect forwarding in a lambda](#tip24)
 - [Three ways of overloading binary operators](#tip25)
 - [Polymorphism without runtime overhead (ft. CRTP)](#tip26)
+- [Virtual destructor](#tip27)
 
 ## Not C++ specific but useful documents
 - [How should I reuse codes if some of the concrete classes doesn't share same behavior?](https://softwareengineering.stackexchange.com/questions/246273/code-re-use-in-c-via-multiple-inheritance-or-composition-or)
@@ -1295,5 +1296,46 @@ int main()
 
     test(d1);
     test(d2);
+}
+```
+## <a name='tip27'></a>Virtual destructor
+```c++
+#include <iostream>
+#include <memory>
+
+class Base
+{
+public:
+    // Making parent class have virtual destructor lets the compiler
+    // check if the instance that Base* is pointing at is a derived class
+    // such that it requires additional destructor calls such as ~Derived()
+    /*virtual*/ ~Base()
+    {
+        std::cout << "~Base" << std::endl;
+    }
+};
+
+class Derived : public Base
+{
+public:
+    ~Derived()
+    {
+        std::cout << "~Derived" << std::endl;
+    }
+};
+
+int main()
+{
+    // OK: base and derived are both released
+    Derived* d = new Derived();
+    delete d; // ~Derived ~Base
+
+    // Bad: only the base region is released (memory leak can happen!)
+    Base* b = new Derived();
+    delete b; // ~Base
+
+    // Ok: smart pointers store the destructor they should call, so it works without virtual destructors
+    std::shared_ptr<Base> sb = std::make_shared<Derived>();
+    sb.reset(); // ~Derived ~Base
 }
 ```
