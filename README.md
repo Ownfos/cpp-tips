@@ -53,7 +53,7 @@ the features they've never knew or concepts which were misunderstood, while read
 - [Three ways of overloading binary operators](#tip25)
 - [Polymorphism without runtime overhead (ft. CRTP)](#tip26)
 - [Virtual destructor](#tip27)
-- [Class member declaration order (subjective!)](#tip28)
+- [Class member declaration order (suggestion)](#tip28)
 
 ## Not C++ specific but useful documents
 - [How should I reuse codes if some of the concrete classes doesn't share same behavior?](https://softwareengineering.stackexchange.com/questions/246273/code-re-use-in-c-via-multiple-inheritance-or-composition-or)
@@ -1341,7 +1341,7 @@ int main()
 }
 ```
 There's a short [article](https://blog.the-pans.com/why-you-dont-need-virtual-destructor-with-smart-pointers/) about smart pointers working well without virtual destructor
-## <a name='tip28'></a>Class member declaration order (opinion)
+## <a name='tip28'></a>Class member declaration order (suggestion)
 ```c++
 class Vector
 {
