@@ -53,6 +53,7 @@ the features they've never knew or concepts which were misunderstood, while read
 - [Three ways of overloading binary operators](#tip25)
 - [Polymorphism without runtime overhead (ft. CRTP)](#tip26)
 - [Virtual destructor](#tip27)
+- [Class member declaration order (subjective!)](#tip28)
 
 ## Not C++ specific but useful documents
 - [How should I reuse codes if some of the concrete classes doesn't share same behavior?](https://softwareengineering.stackexchange.com/questions/246273/code-re-use-in-c-via-multiple-inheritance-or-composition-or)
@@ -1340,3 +1341,28 @@ int main()
 }
 ```
 There's a short [article](https://blog.the-pans.com/why-you-dont-need-virtual-destructor-with-smart-pointers/) about smart pointers working well without virtual destructor
+## <a name='tip28'></a>Class member declaration order (opinion)
+```c++
+class Vector
+{
+// According to the 'dependency inversion principle', a program should only depend on abstraction.
+// A well-encapsulated class never requires a client to care about how it's implemented.
+// In other words, simply looking at the public members should suffice.
+// Therefore it is natural to place public members at the top, followed by protected and private members.
+public:
+    Vector(double x = 0, double y = 0, double z = 0)
+        : x(x), y(y), z(z)
+    {}
+
+    Vector operator+(const Vector& other)  const
+    {
+        return {x + other.x, y + other.y, z + other.z};
+    }
+
+// Remember that client's code can neither access these members nor do they need to!
+private:
+    double x;
+    double y;
+    double z;
+};
+```
