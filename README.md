@@ -53,6 +53,7 @@ the features they've never knew or concepts which were misunderstood, while read
 - [Three ways of overloading binary operators](#tip25)
 - [Polymorphism without runtime overhead (ft. CRTP)](#tip26)
 - [Virtual destructor](#tip27)
+- [Mutability of captured variables in a lambda](#tip28)
 
 ## Not C++ specific but useful documents
 - [How should I reuse codes if some of the concrete classes doesn't share same behavior?](https://softwareengineering.stackexchange.com/questions/246273/code-re-use-in-c-via-multiple-inheritance-or-composition-or)
@@ -1341,3 +1342,29 @@ int main()
 }
 ```
 There's a short [article](https://blog.the-pans.com/why-you-dont-need-virtual-destructor-with-smart-pointers/) about smart pointers working well without virtual destructor
+## <a name='tip28'></a>Mutability of captured variables in a lambda
+```c++
+#include <utility>
+
+int main()
+{
+    auto i = 12345;
+    const auto ci = 12345;
+
+    // capture by value (const by default)
+    [x = i]{};             // const int x
+    [x = ci]{};            // const int x
+    [x = ci]() mutable {}; // int x ('mutable' keyword allows captured variables to be modified!)
+
+    // capture by reference (inherits const qualifier)
+    [&x = i]{};                // int& x
+    [&x = ci]{};               // const int& x
+    [&x = std::as_const(i)]{}; // const int& x (std::as_const() adds const qualifier)
+
+    // example) a sequential integer generator using stateful lambda
+    auto generator = [count = 0]() mutable { return ++count; };
+    generator(); // 1
+    generator(); // 2
+    generator(); // 3
+}
+```
