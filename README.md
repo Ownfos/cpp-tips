@@ -54,6 +54,7 @@ the features they've never knew or concepts which were misunderstood, while read
 - [Polymorphism without runtime overhead (ft. CRTP)](#tip26)
 - [Virtual destructor](#tip27)
 - [Mutability of captured variables in a lambda](#tip28)
+- [Manually locking and unlocking a mutex can be dangerous](#tip29)
 
 ## Not C++ specific but useful documents
 - [How should I reuse codes if some of the concrete classes doesn't share same behavior?](https://softwareengineering.stackexchange.com/questions/246273/code-re-use-in-c-via-multiple-inheritance-or-composition-or)
@@ -1368,3 +1369,48 @@ int main()
     generator(); // 3
 }
 ```
+## <a name='tip29'></a>Manually locking and unlocking a mutex can be dangerous
+```c++
+#include <mutex>
+
+// Some asynchronous job that might throw exception.
+void critical_section()
+{
+    throw std::exception();
+}
+
+int main()
+{
+    // Suppose we have a resource protected with this mutex.
+    std::mutex m;
+
+    try
+    {
+        // Case 1) manual lock/unlock
+        {
+            m.lock();
+
+            // You're not sure if this is will throw exception.
+            // In this case, it DOES throw an exception.
+            critical_section();
+
+            // Since the exception will bring us to the catch clause,
+            // this line doesn't get excecuted and m stays locked.
+            m.unlock();
+        }
+
+        // Case 2) RAII style lock/unlock
+        {
+            // When an exception happens and lg goes out of scope,
+            // the destructor of std::lock_guard will call m.unlock automatically.
+            auto lg = std::lock_guard(m);
+            critical_section();
+        }
+    }
+    catch(const std::exception& e)
+    {
+        // Handle exception
+    }
+}
+```
+Use std::lock_guard or std::unique_lock for exception safety.
