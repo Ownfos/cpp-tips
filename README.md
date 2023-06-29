@@ -55,6 +55,7 @@ the features they've never knew or concepts which were misunderstood, while read
 - [Virtual destructor](#tip27)
 - [Mutability of captured variables in a lambda](#tip28)
 - [Manually locking and unlocking a mutex can be dangerous](#tip29)
+- [std::vector<bool> doesn't store booleans](#tip30)
 
 ## Not C++ specific but useful documents
 - [How should I reuse codes if some of the concrete classes doesn't share same behavior?](https://softwareengineering.stackexchange.com/questions/246273/code-re-use-in-c-via-multiple-inheritance-or-composition-or)
@@ -1414,3 +1415,26 @@ int main()
 }
 ```
 Use std::lock_guard or std::unique_lock for exception safety.
+## <a name='tip30'></a>std::vector<bool> doesn't store booleans
+```c++
+#include <vector>
+#include <array>
+
+int main()
+{
+    // std::vector<bool> stores bit instead of bool for efficiency.
+    // This makes getting a bool& quite complicated,
+    // because bool is 1 byte but the actual data is 1 bit!
+    // What std::vector<bool>::operator[] returns is actually a proxy instance std::vector<bool>::reference.
+    //
+    // The code below implicitly converts std::vector<bool>::reference to an rvalue bool,
+    // so it is basically same as binding a temporary bool to a reference, which is not allowed.
+    std::vector<bool> v{true, false};
+    bool& b1 = v[0]; // Error: cannot bind non-const lvalue reference of type bool& to an rvalue of type bool
+    bool& b2 = true; // Same error!
+
+    std::array<bool, 2> a{true, false};
+    bool& b3 = a[0]; // std::array actually stores bool, so this is valid.
+}
+```
+This is also stated at [Microsoft's C++ documentation](https://learn.microsoft.com/en-us/cpp/standard-library/vector-bool-class?view=msvc-170).
