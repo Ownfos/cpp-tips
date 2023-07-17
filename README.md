@@ -56,6 +56,7 @@ the features they've never knew or concepts which were misunderstood, while read
 - [Mutability of captured variables in a lambda](#tip28)
 - [Manually locking and unlocking a mutex can be dangerous](#tip29)
 - [std::vector<bool> doesn't store booleans](#tip30)
+- [Why do we need std::forward in addition to universal reference? (ft. perfect forwarding)](#tip31)
 
 ## Not C++ specific but useful documents
 - [How should I reuse codes if some of the concrete classes doesn't share same behavior?](https://softwareengineering.stackexchange.com/questions/246273/code-re-use-in-c-via-multiple-inheritance-or-composition-or)
@@ -1438,3 +1439,52 @@ int main()
 }
 ```
 This is also stated at [Microsoft's C++ documentation](https://learn.microsoft.com/en-us/cpp/standard-library/vector-bool-class?view=msvc-170).
+## <a name='tip31'></a>Why do we need std::forward in addition to universal reference? (ft. perfect forwarding)
+```c++
+#include <utility>
+
+struct Test{};
+
+constexpr int foo(Test&)
+{
+    return 0;
+}
+
+constexpr int foo(Test&&)
+{
+    return 1;
+}
+
+// A template function using universal reference only.
+template<typename T>
+constexpr int goo1(T&& arg)
+{
+    return foo(arg);
+}
+
+// A template function that also uses std::forward.
+template<typename T>
+constexpr int goo2(T&& arg)
+{
+    return foo(std::forward<T>(arg));
+}
+
+int main()
+{
+    Test t;
+
+    // Since universal reference should give T the exact type we pass,
+    // it seems like goo1 should also be able to distinguish lvalue and rvalue parameters.
+    // However, goo1 always calls foo(Test&) because the parameter 'arg' itself is an lvalue!
+    static_assert(goo1(Test{}) == goo1(t));
+
+    // On the other hand, goo2 succeeds calling foo(Test&&) for an rvalue parameter.
+    // That's because std::forward behaves like std::move() on rvalue parameters while having no effect on lvalue parameters due to reference collapsing.
+    // Note: given that T is Test&& in this case, std::forward<T> performs static_cast<Test&& &&> which becomes Test&&.
+    //
+    // Forwarding refers to the act of passing arguments to other functions just as we did with foo and goo.
+    // Since universal reference and std::forward does it perfectly,
+    // we call this kind of implementation 'perfect forwarding'.
+    static_assert(goo2(Test{}) != goo2(t));
+}
+```
