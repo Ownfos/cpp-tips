@@ -57,6 +57,7 @@ the features they've never knew or concepts which were misunderstood, while read
 - [Manually locking and unlocking a mutex can be dangerous](#tip29)
 - [std::vector<bool> doesn't store booleans](#tip30)
 - [Why do we need std::forward in addition to universal reference? (ft. perfect forwarding)](#tip31)
+- [A simple yes/no guideline for deciding member variable type](#tip32)
 
 ## Not C++ specific but useful documents
 - [How should I reuse codes if some of the concrete classes doesn't share same behavior?](https://softwareengineering.stackexchange.com/questions/246273/code-re-use-in-c-via-multiple-inheritance-or-composition-or)
@@ -1486,5 +1487,95 @@ int main()
     // Since universal reference and std::forward does it perfectly,
     // we call this kind of implementation 'perfect forwarding'.
     static_assert(goo2(Test{}) != goo2(t));
+}
+```
+## <a name='tip32'></a>A simple yes/no guideline for deciding member variable type
+```c++
+#include <memory>
+
+// Given that T is not a fundamental type such as int,
+// let us decide what variant of T should we use as a member variable.
+//
+// These are the five most frequently used types for member variables:
+// - T
+// - T*
+// - T&
+// - std::shared_ptr<T>
+// - std::unique_ptr<T>
+//
+// Keep answering yes or no to the questions below
+// to find out which of the five best fits you.
+//
+// For people who are not sure what ownership means,
+// let's assume that you should own an instance when the instance's lifetime should depend on you.
+//
+// ex) A car should own an engine because you don't need the engine alone.
+//
+// On the other hand, you don't necessarily require ownership
+// when the instance is guaranteed to be valid while you reference it.
+//
+// ex) A function that calls Player::name() doesn't need to own Player instance,
+//     you know that the instance will be alive at least inside that function.
+//
+// Although there are cases you don't need to own something, it doesn't mean that you shouldn't.
+// Having ownership does come with cost but it also has benefits.
+// For example, you won't suffer from dangling references or pointers!
+//
+// If you are sure that such problems (e.g., null pointer exception) don't exist
+// and you need to take care of performance, consider non-owning references.
+//
+// WARNING: this is a personal guideline, so the suggestion might not fit for all situations.
+template<typename T>
+void member_type_guideline()
+{
+    // Should you own an instance of T?
+    if (true)
+    {
+        // Is there any other object that also requires ownership to it?
+        if (true)
+        {
+            // WARNING: circular reference might cause memory leak (use std::weak_ptr in such cases)
+            std::shared_ptr<T> member_variable;
+        }
+        else
+        {
+            // Is T a polymorphic class?
+            // Note: T is polymorphic if it has virtual functions.
+            if (true)
+            {
+                // Reason: polymorphism only works with references or pointers.
+                std::unique_ptr<T> member_variable;
+            }
+            else
+            {
+                T member_variable;
+            }
+        }
+    }
+    else
+    {
+        // Do you need to provide copy constructor and copy assignment operator for your class?
+        if (true)
+        {
+            // Reason: you can't copy an object when you use reference type for a member variable.
+            T* member_variable;
+        }
+        else
+        {
+            // Do you need to reassign a new value to the member variable?
+            if (true)
+            {
+                // Reason: you can't reassign a reference variable.
+                T* member_variable;
+            }
+            else
+            {
+                // Since you have to initialize reference variables on construction,
+                // you'll have to provide an instance of T as a constructor parameter.
+                T t;
+                T& member_variable = t;
+            }
+        }
+    }
 }
 ```
