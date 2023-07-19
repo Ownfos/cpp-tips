@@ -380,8 +380,8 @@ auto sum(First first, Others... others)
     //
     // left fold groups the leftmost term first, while right fold groups the rightmost one.
     // ex) if parameters are given as E1, E2, E3, E4, and E5,
-    // (... + others) turns into (E1 + (E2 + (E3 + (E4 + E5)))), while
-    // (others + ...) turns into ((((E1 + E2) + E3) + E4) + E5)
+    // (... + others) turns into ((((E1 + E2) + E3) + E4) + E5), while
+    // (others + ...) turns into (E1 + (E2 + (E3 + (E4 + E5))))
     //
     // The expression below expands to (((first + second) + third) + ...) + last;
     return (first + ... + others);
