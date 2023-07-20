@@ -304,7 +304,7 @@ int main()
     
     // We usually use commas as separators because
     // not only do we intend that but also comma operators have one of the lowest priorities.
-    foo(i++, j += 1.1); // prints 3.3
+    foo(i++, j += 1.1); // prints 1 3.3
     
     // But if we just put enough parenthesis to give a chance for a comma to be interpreted as an operator,
     // the whole expression is turned into a sequential evaluation where the rightmost term is returned.
