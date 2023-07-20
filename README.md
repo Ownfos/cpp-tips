@@ -5,12 +5,12 @@ Collection of small tips and tricks for C++
 As a C++ user, I had a hard time learning the rules and best practices of this awesome language.<br>
 There are so many things that we can do with it, but it doesn't come without costs: the notorious complexity and steep learning curve.
 
-I also had to struggle with many compiler errors which doesn't always point the problem directly,<br>
+I also had to struggle with many compiler errors which don't always point to the problem directly,<br>
 and it took me so much time to figure out the details which were the core reasons for my error.<br>
 Although there are numerous tutorials suited for each level of proficiency,<br>
 I've discovered that the situation and requirements we face are simply uncountable that even these nice guides can't cover them all.<br>
 
-These kinds of practical informations or know-hows we earn by countless trial and error are hardly known to C++ beginners.<br>
+These kinds of practical information or know-hows we earn by countless trial and error are hardly known to C++ beginners.<br>
 It also takes quite a long time to do so, therefore I couldn't just recommend others to learn it through experiences just like I did.<br>
 
 That's exactly the reason why I chose to make this repository:<br>
@@ -18,49 +18,55 @@ to share my experience with others so that they can solve different problems<br>
 they might face in the future with minimal effort and advance their skills.<br>
 
 I still highly appreciate learning through trial and error.<br>
-Making toy projects and surfing stackoverflow to solve each problem you face are precious experiences<br>
+Making toy projects and surfing Stackoverflow to solve each problem you face are precious experiences<br>
 that will let you stand on your own and face challenges you can overcome with some effort.<br>
 
 By the way, I highly recommend reading [c++ language reference](https://learn.microsoft.com/en-us/cpp/cpp/cpp-language-reference?view=msvc-170) created by Microsoft!<br>
 Beginners might not get much out of it but I believe intermediate users would find out<br>
-the features they've never knew or concepts which were misunderstood, while reading this document from a to z.
+the features they've never knew or concepts which were misunderstood, while reading this document from A to Z.
 
 ## List of contents
+### Language Features
+- [Trailing return type](#tip5)
+- [Structured binding](#tip20)
+- [Virtual destructor](#tip27)
+- [Fold expressions for variadic template](#tip9)
+- [Designated initializer (ft. named parameter)](#tip8)
+- [Commas can be used in two ways: separator and operator](#tip13)
+- [Dynamic and static cast for smart pointers](#tip15)
+- [Three ways of overloading binary operators](#tip25)
+- [The meaning of 'qualified name' and 'unqualified access'](#tip18)
+### Initialization and Construction
 - [Initializing std::vector with initializer-list always invokes copy constructor](#tip1)
 - [const std::string& and std::string_view can also cause allocation](#tip2)
-- [Creating a lambda behaves the same as creating a struct with operator() overloaded](#tip3)
-- [Hiding variable names using extra scope](#tip4)
-- [Trailing return type](#tip5)
-- [Making your variable shared by all translation units](#tip6)
 - [Declaring and initializing static member variables at the same time (in a header file)](#tip7)
-- [Mimic 'named parameter' for function calls like other languages](#tip8)
-- [Fold expressions for variadic template](#tip9)
-- [Multi-step (user defined) implicit conversion is not allowed](#tip10)
-- [Implicit conversion might cause confusion: consider using 'explicit'](#tip11)
-- [Rvalue reference parameter is a lvalue](#tip12)
-- [Commas can be used in two ways: seperator and operator](#tip13)
-- [const keyword applies to the left token, unless it comes at the start](#tip14)
-- [Dynamic and static cast for smart pointers](#tip15)
-- [The reason why using static_cast for downcast is unsafe](#tip16)
-- [Declaring variables inside a switch statement](#tip17)
-- [The meaning of qualified name and unqualified access](#tip18)
-- [External linkage vs internal linkage (with examples)](#tip19)
-- [Structured binding](#tip20)
 - [How to initialize a reference member (ft. member initializer list)](#tip21)
-- [Using nested symbol of a template type as a typename](#tip22)
-- [Template argument decution (ft. std::forward and universal reference)](#tip23)
+### Function Parameters and Perfect Forwarding
+- [Rvalue reference parameter is a lvalue](#tip12)
+- [Template argument deduction (ft. std::forward and universal reference)](#tip23)
+- [Why do we need std::forward in addition to universal reference? (ft. perfect forwarding)](#tip31)
 - [Perfect forwarding in a lambda](#tip24)
-- [Three ways of overloading binary operators](#tip25)
-- [Polymorphism without runtime overhead (ft. CRTP)](#tip26)
-- [Virtual destructor](#tip27)
+### Linkage and Scope
+- [Hiding variable names using extra scope](#tip4)
+- [Making your variable shared by all translation units](#tip6)
+- [External linkage vs internal linkage (with examples)](#tip19)
+### Tricky Behaviors
+- [Multi-step (user-defined) implicit conversion is not allowed](#tip10)
+- [Implicit conversion might cause confusion: consider using 'explicit'](#tip11)
+- [The reason why using static_cast for downcast is unsafe](#tip16)
 - [Mutability of captured variables in a lambda](#tip28)
 - [Manually locking and unlocking a mutex can be dangerous](#tip29)
 - [std::vector<bool> doesn't store booleans](#tip30)
-- [Why do we need std::forward in addition to universal reference? (ft. perfect forwarding)](#tip31)
+### Tips
+- [Using nested symbol of a template type as a typename](#tip22)
+- [Declaring variables inside a switch statement](#tip17)
+- [const keyword applies to the left token, unless it comes at the start](#tip14)
+- [Polymorphism without runtime overhead (ft. CRTP)](#tip26)
+- [Creating a lambda behaves the same as creating a struct with operator() overloaded](#tip3)
 - [A simple yes/no guideline for deciding member variable type](#tip32)
 
 ## Not C++ specific but useful documents
-- [How should I reuse codes if some of the concrete classes doesn't share same behavior?](https://softwareengineering.stackexchange.com/questions/246273/code-re-use-in-c-via-multiple-inheritance-or-composition-or)
+- [How should I reuse codes if some of the concrete classes don't share the same behavior?](https://softwareengineering.stackexchange.com/questions/246273/code-re-use-in-c-via-multiple-inheritance-or-composition-or)
 - [How should I order the members of a class?](https://stackoverflow.com/questions/308581/how-should-i-order-the-members-of-a-c-class)
 
 ## <a name='tip1'></a>Initializing std::vector with initializer-list always invokes copy constructor
@@ -345,7 +351,7 @@ namespace
 ```
 Checkout this [stackoverflow question](https://stackoverflow.com/questions/61714110/static-inline-vs-inline-static) for more information on 'inline static' vs 'static inline'.<br>
 This [stackoverflow question](https://stackoverflow.com/questions/16386256/inline-functions-and-external-linkage), on the other hand, will help you distinguish  'inline' and 'external linkage'.
-## <a name='tip8'></a>Mimic 'named parameter' for function calls like other languages
+## <a name='tip8'></a>Designated initializer (ft. named parameter)
 ```c++
 struct Args
 {
@@ -360,6 +366,9 @@ auto foo(Args args) -> void
 
 auto main() -> int
 {
+    // From c++20, you can initialize structs with member names.
+    // By packing function arguments into one struct,
+    // you can mimic the 'named parameter' feature of other languages like Python!
     foo({.x = 2, .y = -4});
 }
 ```
@@ -745,10 +754,10 @@ exit:
 }
 ```
 Further details can be found in this [stackoverflow question](https://stackoverflow.com/questions/92396/why-cant-variables-be-declared-in-a-switch-statement)
-## <a name='tip18'></a>The meaning of qualified name and unqualified access
+## <a name='tip18'></a>The meaning of 'qualified name' and 'unqualified access'
 ```c++
-// Qualified name is a full name which includes an idendifier's namespace or class name.
-// Qualified access means we specify the idendifier by its full name (e.g. std::vector).
+// Qualified name is a full name that includes an identifier's namespace or class name.
+// Qualified access means we specify the identifier by its full name (e.g. std::vector).
 // Unqualified access, on the other hand, means that we omit some parts of the qualified name while we specify an identifier.
 // This is possible in some places like nested namespace or a region after using namespace ~ statement is used.
 namespace Toolbox
@@ -771,13 +780,13 @@ Test.h
 ```c++
 // External linkage:
 //     A symbol declared in one translation unit is visible to other translation units.
-//     An external variable has same value in every translation unit.
+//     An external variable has the same value in every translation unit.
 //     Think of it as having one instance per program.
 //     Symbols with external linkage should obey ODR (One Definition Rule).
 //
 // Internal linkage:
 //     A symbol is visible only to the translation unit where it was declared.
-//     An internal variable might have different values in different translation unit.
+//     An internal variable might have different values in different translation units.
 //     Think of it as having one instance per translation unit.
 
 
@@ -830,7 +839,7 @@ public:
 
 private:
     // It doesn't make much sense to talk about linkage of non-static member variables.
-    // They are discussed on instance level not translation unit level.
+    // They are discussed on instance level, not translation unit level.
     //
     // Think of these two declarations in a header file:
     //     extern External e1;
@@ -903,7 +912,7 @@ auto getStudentInfo()
 int main()
 {
     // Structured binding enhances readability by giving names
-    // to elements of an aggregate objects like key-value pair.
+    // to elements of aggregate objects like key-value pair.
     {
         auto m = std::map<int, double>{{1, 1.11}, {2, 2.22}};
 
@@ -1012,11 +1021,11 @@ struct Haha
 
 // T::Something can be either a type or a non-type (e.g. static member variable):
 //   Int::Something  -> int
-//   Haha::Something -> compile time constant integer of value 1234.
+//   Haha::Something -> compile-time constant integer of value 1234.
 //
 // To distinguish type and non-type usage:
-// 1. specify 'typename' if a scoped name of a template type like T::Something should be interpreted as a type.
-// 2. do not specify 'typename' if a scoped name of a template type is non-type.
+// 1. Specify 'typename' if a scoped name of a template type like T::Something should be interpreted as a type.
+// 2. Do not specify 'typename' if a scoped name of a template type is non-type.
 template<typename T>
 constexpr auto asType()
 {
@@ -1376,7 +1385,7 @@ int main()
 ```c++
 #include <mutex>
 
-// Some asynchronous job that might throw exception.
+// Some asynchronous job that might throw exceptions.
 void critical_section()
 {
     throw std::exception();
@@ -1398,7 +1407,7 @@ int main()
             critical_section();
 
             // Since the exception will bring us to the catch clause,
-            // this line doesn't get excecuted and m stays locked.
+            // this line doesn't get executed and m stays locked.
             m.unlock();
         }
 
