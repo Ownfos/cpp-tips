@@ -1451,13 +1451,13 @@ This [stackoverflow question](https://stackoverflow.com/questions/1898524/differ
 class Base
 {
 public:
-     void foo() const = 0;
+    virtual void foo() const = 0;
 };
 
 class Derived : public Base
 {
 public:
-    void foo() const override
+    virtual void foo() const override
     {
         std::cout << "runtime polymorphism" << std::endl;
     }
