@@ -1,5 +1,6 @@
 # cpp-tips
-Collection of small tips and tricks for C++
+Collection of small tips and tricks for C++<br>
+* [한국어 버전](READMEkr.md)
 
 ## Introduction
 As a C++ user, I had a hard time learning the rules and best practices of this awesome language.<br>
