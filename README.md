@@ -563,7 +563,8 @@ private:
     // so you should pick one and use it as if it were declared only once.
     //
     // Though 'inline' keyword doesn't always make things have external linkage,
-    // it is usually involved with symbols that are external (e.g. static inline global variables, inline member functions, ...)
+    // it is usually involved with symbols that are external (e.g. static inline member variables).
+    // I think that's because symbols with internal linkage have no problem dealing with ODR.
     //
     // Note that 'inline static' and 'static inline' have the same effect,
     // but the latter is preferred because 'static' is a storage class specifier
@@ -967,9 +968,8 @@ Test.h
 // Declaring a variable inside an anonymous namespace does the same job.
 static int case2 = 1234; // internal linkage
 
-// 'static inline' doesn't let variables have internal linkage unlike 'static',
-// but it makes defining global variables in a header file possible.
-static inline int case3 = 1234; // external linkage
+// static global variables already have internal linkage, so 'inline' doesn't have any effect here.
+static inline int case3 = 1234; // internal linkage
 
 // Global functions are external by default.
 // ODR violation if multiple translation units include this header file using #include.
