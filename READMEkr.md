@@ -40,6 +40,7 @@
 - [런타임 오버헤드 없는 다형성 (ft. CRTP)](#tip26)
 - [람다를 만드는 것은 operator()를 정의한 구조체를 만드는 것과 비슷합니다](#tip3)
 - [멤버 변수의 타입을 결정하는 법](#tip32)
+- [```set(CMAKE_CXX_STANDARD ??)```는 꼭 ```project()``` 뒤에 나와야합니다](#tip33)
 
 ## Language Features
 ### <a name='tip5'></a>Trailing return type
@@ -1574,4 +1575,30 @@ void member_type_guideline()
         }
     }
 }
+```
+
+### <a name='tip33'></a>```set(CMAKE_CXX_STANDARD ??)```는 꼭 ```project()``` 뒤에 나와야합니다
+Bad
+```cmake
+cmake_minimum_required(VERSION 3.10)
+
+# project() 전에 적으면 설정이 무시되더군요...?
+# 왜 이게 적용이 안되는지 의문이었는데 한참 뒤에야 이걸 발견했네요
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED True)
+
+project(test)
+
+add_executable(test main.cpp)
+```
+Good
+```cmake
+cmake_minimum_required(VERSION 3.10)
+
+project(test)
+
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED True)
+
+add_executable(test main.cpp)
 ```
