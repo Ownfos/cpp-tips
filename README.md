@@ -69,6 +69,7 @@ the features they've never knew or concepts which were misunderstood, while read
 - [Polymorphism without runtime overhead (ft. CRTP)](#tip26)
 - [Creating a lambda behaves the same as creating a struct with operator() overloaded](#tip3)
 - [A simple yes/no guideline for deciding member variable type](#tip32)
+- [Make sure that ```set(CMAKE_CXX_STANDARD ??)``` comes after ```project()```](#tip33)
 
 ## Language Features
 ### <a name='tip5'></a>Trailing return type
@@ -1623,4 +1624,29 @@ void member_type_guideline()
         }
     }
 }
+```
+
+### <a name='tip33'></a>Make sure that `set(CMAKE_CXX_STANDARD ??)` comes after `project()`
+Bad
+```cmake
+cmake_minimum_required(VERSION 3.10)
+
+# These settings are ignored!
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED True)
+
+project(test)
+
+add_executable(test main.cpp)
+```
+Good
+```cmake
+cmake_minimum_required(VERSION 3.10)
+
+project(test)
+
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED True)
+
+add_executable(test main.cpp)
 ```
