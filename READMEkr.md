@@ -1337,6 +1337,9 @@ void wait_for_signal()
 				// 3. 신호가 오면 두 번째 파라미터로 넘긴 조건을 검사해서 'spurious wakeup'이 아닌지 확인
 				// 3-1. 만약 false를 리턴하면 다시 m을 잠그고 신호가 올때까지 기다림 (step 2로 돌아감)
 				// 3-2. 만약 true를 리턴하면 m이 잠긴 상태로 다음 줄로 넘어감
+				//
+				// wait()중인 스레드가 없는 경우 notify_one() 또는 notify_all()로 보낸 신호를 놓치게되므로
+				// consumer 스레드가 producer 스레드보다 느린 경우는 조심해야합니다.
 				cv.wait(ul, [&] { return items.size() > 0; });
 
 				item = items.back();
