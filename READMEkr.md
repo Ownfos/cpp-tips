@@ -31,8 +31,10 @@
 - [암시적 변환은 혼란을 야기할 수 있습니다: 'explicit'을 사용해보세요](#tip11)
 - [static_cast로 하는 downcasting이 위험한 이유](#tip16)
 - [람다에서 캡처한 변수의 mutability](#tip28)
-- [뮤텍스를 수동으로 잠그고 푸는 것은 위험합니다](#tip29)
 - [std::vector<bool>은 bool을 저장하지 않습니다](#tip30)
+### Concurrency
+- [뮤텍스를 수동으로 잠그고 푸는 것은 위험합니다](#tip29)
+- [멀티스레딩을 할 때 특정 신호를 기다리거나 동기화 지점을 만드는 방법](#tip34)
 ### Other Tips
 - [템플릿 타입의 중첩된 symbol을 타입 이름으로 사용하기](#tip22)
 - [switch문 안에서 변수 선언하기](#tip17)
@@ -1194,6 +1196,31 @@ int main()
 }
 ```
 
+### <a name='tip30'></a>std::vector<bool>은 bool을 저장하지 않습니다
+```c++
+#include <vector>
+#include <array>
+
+int main()
+{
+    // std::vector<bool>은 저장공간 효율을 위해 bool대신 bit를 사용합니다.
+    // 이게 저장된 원소에 대한 bool&를 갖기 어렵게 만드는데요,
+    // bit단위 레퍼런스는 언어 차원에서 제공하지 않기 때문입니다.
+    // 실제로 std::vector<bool>::operator[]가 리턴하는 객체는 std::vector<bool>::reference라는 프록시입니다.
+    //
+    // 아래 예시는 std::vector<bool>::reference를 rvalue bool로 변환하는데,
+    // 결과적으론 임시 bool 객체를 레퍼런스 변수에 묶으려는 것과 동일해서 허용되지 않습니다.
+    std::vector<bool> v{true, false};
+    bool& b1 = v[0]; // Error: cannot bind non-const lvalue reference of type bool& to an rvalue of type bool
+    bool& b2 = true; // Same error!
+
+    std::array<bool, 2> a{true, false};
+    bool& b3 = a[0]; // std::array는 진짜 bool을 사용해서 잘 작동합니다.
+}
+```
+[Microsoft's C++ documentation](https://learn.microsoft.com/en-us/cpp/standard-library/vector-bool-class?view=msvc-170)에도 해당 내용이 명시되어있습니다.
+
+## Concurrency
 ### <a name='tip29'></a>뮤텍스를 수동으로 잠그고 푸는 것은 위험합니다
 ```c++
 #include <mutex>
@@ -1240,29 +1267,162 @@ int main()
 ```
 exception safety를 위해 std::lock_guard나 std::unique_lock를 사용해주세요.
 
-### <a name='tip30'></a>std::vector<bool>은 bool을 저장하지 않습니다
-```c++
+### <a name='tip34'></a>멀티스레딩을 할 때 특정 신호를 기다리거나 동기화 지점을 만드는 방법
+```C++
+#include <thread>
+#include <mutex>
+#include <barrier>
+#include <condition_variable>
 #include <vector>
-#include <array>
+#include <atomic>
+#include <format>
+#include <iostream>
+
+// 원하는 동작:
+// - 한 스레드에서 다른 스레드에서 신호를 보낼 때까지 기다리는 것
+//
+// 사용되는 도구:
+// - std::mutex
+// - std::condition_variable
+// - std::unique_lock
+//
+// 필요한 c++ 표준:
+// - C++11 이상
+// 
+// 용례:
+// - producer 스레드는 클라이언트가 보내는 요청 패킷을 큐에 쌓아둠
+// - consumer 스레드는 큐에서 패킷을 하나씩 꺼내고 처리함
+void wait_for_signal()
+{
+	// producer 스레드가 끝났다고 알려주는 용도
+	auto done = std::atomic_bool{ false };
+
+	// producer에서 consumer로 정보를 전달해주는 객체
+	auto items = std::vector<int>{};
+
+	// 동기화에 사용되는 객체
+	auto m = std::mutex{};
+	auto cv = std::condition_variable{};
+
+	// producer 스레드는 500ms마다 items에 숫자를 하나씩 넣습니다
+	auto producer = std::thread([&] {
+		for (int i = 0; i < 3; ++i)
+		{
+			std::this_thread::sleep_for(std::chrono::milliseconds(500));
+
+			// Critical section
+			{
+				auto lg = std::lock_guard(m);
+				items.push_back(i);
+			}
+
+			cv.notify_one();
+		}
+
+		done = true;
+	});
+
+	// consumer 스레드는 items에 숫자가 들어올 때마다 하나씩 빼내고 출력합니다
+	auto consumer = std::thread([&] {
+		while (!done)
+		{
+			int item;
+
+			// Critical section
+			{
+				// 1. m을 잠금
+				auto ul = std::unique_lock(m);
+
+				// 2. m을 해제하고 cv에 신호가 올때까지 기다림
+				// 3. 신호가 오면 두 번째 파라미터로 넘긴 조건을 검사해서 'spurious wakeup'이 아닌지 확인
+				// 3-1. 만약 false를 리턴하면 다시 m을 잠그고 신호가 올때까지 기다림 (step 2로 돌아감)
+				// 3-2. 만약 true를 리턴하면 m이 잠긴 상태로 다음 줄로 넘어감
+				cv.wait(ul, [&] { return items.size() > 0; });
+
+				item = items.back();
+				items.pop_back();
+			}
+
+			std::cout << item << std::endl;
+		}
+	});
+
+	producer.join();
+	consumer.join();
+}
+
+// 원하는 동작:
+// - 여러 스레드가 특정 지점에 도달할 때까지 기다리는 것
+//
+// 사용되는 도구:
+// - std::barrier
+// - std::latch (일회용 std::barrier)
+//
+// 필요한 c++ 표준:
+// - C++20 이상
+// 
+// 용례:
+// - 여러 오브젝트가 update()와 render()를 수행해야하는 게임을 만드는 중
+// - update()는 병렬로 실행할 수 있어서 스레드 풀을 사용할 예정
+// - render()는 모든 update()가 끝난 다음에 실행되어야 함
+void wait_for_tasks()
+{
+	constexpr auto num_workers = 3;
+
+	// 초기 카운트와 완료 callback으로 barrier를 생성합니다
+	// arrive_and_wait()가 실행될 때마다 count가 줄어들고
+	// count가 0이 되는 순간 callback이 실행됩니다.
+	// Note: callback 함수는 'noexcept'이어야 합니다
+	auto sync_point = std::barrier(num_workers, []() noexcept {
+		std::cout << "everyone reached sync_point\n";
+	});
+
+	// worker 스레드를 생성합니다
+	auto workers = std::vector<std::thread>();
+	for (int i = 0; i < num_workers; ++i)
+	{
+		workers.push_back(std::thread([&, id = i] {
+			std::cout << std::format("worker thread #{} started\n", id);
+			std::this_thread::sleep_for(std::chrono::milliseconds(100 * id));
+			std::cout << std::format("worker thread #{} reached sync_point\n", id);
+			sync_point.arrive_and_wait();
+			std::cout << std::format("worker thread #{} ended\n", id);
+		}));
+	}
+
+	for (auto& worker : workers)
+	{
+		worker.join();
+	}
+}
 
 int main()
 {
-    // std::vector<bool>은 저장공간 효율을 위해 bool대신 bit를 사용합니다.
-    // 이게 저장된 원소에 대한 bool&를 갖기 어렵게 만드는데요,
-    // bit단위 레퍼런스는 언어 차원에서 제공하지 않기 때문입니다.
-    // 실제로 std::vector<bool>::operator[]가 리턴하는 객체는 std::vector<bool>::reference라는 프록시입니다.
-    //
-    // 아래 예시는 std::vector<bool>::reference를 rvalue bool로 변환하는데,
-    // 결과적으론 임시 bool 객체를 레퍼런스 변수에 묶으려는 것과 동일해서 허용되지 않습니다.
-    std::vector<bool> v{true, false};
-    bool& b1 = v[0]; // Error: cannot bind non-const lvalue reference of type bool& to an rvalue of type bool
-    bool& b2 = true; // Same error!
+	std::cout << "Example 1: waiting for a signal" << std::endl;
+	wait_for_signal();
 
-    std::array<bool, 2> a{true, false};
-    bool& b3 = a[0]; // std::array는 진짜 bool을 사용해서 잘 작동합니다.
+	std::cout << "Example 2: waiting on a synchronization point" << std::endl;
+	wait_for_tasks();
 }
 ```
-[Microsoft's C++ documentation](https://learn.microsoft.com/en-us/cpp/standard-library/vector-bool-class?view=msvc-170)에도 해당 내용이 명시되어있습니다.
+Expected output:
+```
+Example 1: waiting for a signal
+0
+1
+2
+Example 2: waiting on a synchronization point
+worker thread #0 started
+worker thread #2 started
+worker thread #0 reached sync_point
+worker thread #1 started
+worker thread #1 reached sync_point
+worker thread #2 reached sync_point
+everyone reached sync_point
+worker thread #1 ended
+worker thread #2 ended
+worker thread #0 ended
+```
 
 ## Other Tips
 ### <a name='tip22'></a>템플릿 타입의 중첩된 symbol을 타입 이름으로 사용하기
