@@ -60,8 +60,10 @@ the features they've never knew or concepts which were misunderstood, while read
 - [Implicit conversion might cause confusion: consider using 'explicit'](#tip11)
 - [The reason why using static_cast for downcast is unsafe](#tip16)
 - [Mutability of captured variables in a lambda](#tip28)
-- [Manually locking and unlocking a mutex can be dangerous](#tip29)
 - [std::vector<bool> doesn't store booleans](#tip30)
+### Concurrency
+- [Manually locking and unlocking a mutex can be dangerous](#tip29)
+- [How to wait for a signal or create a synchronization point for multiple threads](#tip34)
 ### Other Tips
 - [Using nested symbol of a template type as a type name](#tip22)
 - [Declaring variables inside a switch statement](#tip17)
@@ -1238,6 +1240,31 @@ int main()
 }
 ```
 
+### <a name='tip30'></a>std::vector<bool> doesn't store booleans
+```c++
+#include <vector>
+#include <array>
+
+int main()
+{
+    // std::vector<bool> stores bit instead of bool for efficiency.
+    // This makes getting a bool& quite complicated,
+    // because bool is 1 byte but the actual data is 1 bit!
+    // What std::vector<bool>::operator[] returns is actually a proxy instance std::vector<bool>::reference.
+    //
+    // The code below implicitly converts std::vector<bool>::reference to an rvalue bool,
+    // so it is basically same as binding a temporary bool to a reference, which is not allowed.
+    std::vector<bool> v{true, false};
+    bool& b1 = v[0]; // Error: cannot bind non-const lvalue reference of type bool& to an rvalue of type bool
+    bool& b2 = true; // Same error!
+
+    std::array<bool, 2> a{true, false};
+    bool& b3 = a[0]; // std::array actually stores bool, so this is valid.
+}
+```
+This is also stated in [Microsoft's C++ documentation](https://learn.microsoft.com/en-us/cpp/standard-library/vector-bool-class?view=msvc-170).
+
+## Concurrency
 ### <a name='tip29'></a>Manually locking and unlocking a mutex can be dangerous
 ```c++
 #include <mutex>
@@ -1284,29 +1311,163 @@ int main()
 ```
 Use std::lock_guard or std::unique_lock for exception safety.
 
-### <a name='tip30'></a>std::vector<bool> doesn't store booleans
-```c++
+### <a name='tip34'></a>How to wait for a signal or create a synchronization point for multiple threads
+```C++
+#include <thread>
+#include <mutex>
+#include <barrier>
+#include <condition_variable>
 #include <vector>
-#include <array>
+#include <atomic>
+#include <format>
+#include <iostream>
+
+// Desired behavior:
+// - a thread should wait for an event triggered by another thread
+//
+// Tools used:
+// - std::mutex
+// - std::condition_variable
+// - std::unique_lock
+//
+// Required standard:
+// - C++11 or higher
+// 
+// Example use case:
+// - producer thread accumulates request packets sent by clients into a queue
+// - consumer thread pops packet from the queue and handle the requst
+void wait_for_signal()
+{
+	// Used to nofity consumer thread that producer thread is terminated
+	auto done = std::atomic_bool{ false };
+
+	// Shared instance used to pass information from producer to consumer
+	auto items = std::vector<int>{};
+
+	// Synchornization primitives
+	auto m = std::mutex{};
+	auto cv = std::condition_variable{};
+
+	// Producer thread pushes an integer to items vector every 500ms
+	auto producer = std::thread([&] {
+		for (int i = 0; i < 3; ++i)
+		{
+			std::this_thread::sleep_for(std::chrono::milliseconds(500));
+
+			// Critical section
+			{
+				auto lg = std::lock_guard(m);
+				items.push_back(i);
+			}
+
+			cv.notify_one();
+		}
+
+		done = true;
+	});
+
+	// Consumer thread waits for items vector to fill up and print the content
+	auto consumer = std::thread([&] {
+		while (!done)
+		{
+			int item;
+
+			// Critical section
+			{
+				// 1. lock m.
+				auto ul = std::unique_lock(m);
+
+				// 2. unlock m and wait until cv receives signal.
+				// 3. evaluate predicate (the lambda passed as the second parameter)
+				//    to check if it was a 'spurious wakeup'.
+				// 3-1. if the result is false, lock m and start waiting (return to step 2).
+				// 3-2. if the result is true, proceed to the next line (m stays locked).
+				cv.wait(ul, [&] { return items.size() > 0; });
+
+				item = items.back();
+				items.pop_back();
+			}
+
+			std::cout << item << std::endl;
+		}
+	});
+
+	producer.join();
+	consumer.join();
+}
+
+// Desired behavior:
+// - multiple threads should wait on a synchronization point
+//
+// Tools used:
+// - std::barrier
+// - std::latch (single-use version of std::barrier)
+//
+// Required standard:
+// - C++20 or higher
+// 
+// Example use case:
+// - you are making a game where multiple objects should update() and render() on each frame
+// - update() can be parallelized, so you are going to use thread pool
+// - render() should be called only after every update() is done
+void wait_for_tasks()
+{
+	constexpr auto num_workers = 3;
+
+	// Create a barrier with initial count and a completion callback.
+	// Each arrive_and_wait() decreases the count by one
+	// and the callback gets called when the count reaches zero.
+	// Note: callback function should be 'noexcept'
+	auto sync_point = std::barrier(num_workers, []() noexcept {
+		std::cout << "everyone reached sync_point\n";
+	});
+
+	// Create worker threads
+	auto workers = std::vector<std::thread>();
+	for (int i = 0; i < num_workers; ++i)
+	{
+		workers.push_back(std::thread([&, id = i] {
+			std::cout << std::format("worker thread #{} started\n", id);
+			std::this_thread::sleep_for(std::chrono::milliseconds(100 * id));
+			std::cout << std::format("worker thread #{} reached sync_point\n", id);
+			sync_point.arrive_and_wait();
+			std::cout << std::format("worker thread #{} ended\n", id);
+		}));
+	}
+
+	for (auto& worker : workers)
+	{
+		worker.join();
+	}
+}
 
 int main()
 {
-    // std::vector<bool> stores bit instead of bool for efficiency.
-    // This makes getting a bool& quite complicated,
-    // because bool is 1 byte but the actual data is 1 bit!
-    // What std::vector<bool>::operator[] returns is actually a proxy instance std::vector<bool>::reference.
-    //
-    // The code below implicitly converts std::vector<bool>::reference to an rvalue bool,
-    // so it is basically same as binding a temporary bool to a reference, which is not allowed.
-    std::vector<bool> v{true, false};
-    bool& b1 = v[0]; // Error: cannot bind non-const lvalue reference of type bool& to an rvalue of type bool
-    bool& b2 = true; // Same error!
+	std::cout << "Example 1: waiting for a signal" << std::endl;
+	wait_for_signal();
 
-    std::array<bool, 2> a{true, false};
-    bool& b3 = a[0]; // std::array actually stores bool, so this is valid.
+	std::cout << "Example 2: waiting on a synchronization point" << std::endl;
+	wait_for_tasks();
 }
 ```
-This is also stated in [Microsoft's C++ documentation](https://learn.microsoft.com/en-us/cpp/standard-library/vector-bool-class?view=msvc-170).
+Expected output:
+```
+Example 1: waiting for a signal
+0
+1
+2
+Example 2: waiting on a synchronization point
+worker thread #0 started
+worker thread #2 started
+worker thread #0 reached sync_point
+worker thread #1 started
+worker thread #1 reached sync_point
+worker thread #2 reached sync_point
+everyone reached sync_point
+worker thread #1 ended
+worker thread #2 ended
+worker thread #0 ended
+```
 
 ## Other Tips
 ### <a name='tip22'></a>Using nested symbol of a template type as a type name
