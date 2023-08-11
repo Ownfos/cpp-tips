@@ -1382,6 +1382,10 @@ void wait_for_signal()
 				//    to check if it was a 'spurious wakeup'.
 				// 3-1. if the result is false, lock m and start waiting (return to step 2).
 				// 3-2. if the result is true, proceed to the next line (m stays locked).
+				//
+				// You should be careful if the consumer thread runs slower than the producer thread,
+				// because notify_one() and notify_all() DO NOT have any effect when no one is waiting!
+				// This means that some of the signals can be lost!
 				cv.wait(ul, [&] { return items.size() > 0; });
 
 				item = items.back();
