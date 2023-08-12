@@ -1317,7 +1317,7 @@ Use std::lock_guard or std::unique_lock for exception safety.
 #include <mutex>
 #include <barrier>
 #include <condition_variable>
-#include <vector>
+#include <queue>
 #include <atomic>
 #include <format>
 #include <iostream>
@@ -1338,66 +1338,81 @@ Use std::lock_guard or std::unique_lock for exception safety.
 // - consumer thread pops packet from the queue and handle the requst
 void wait_for_signal()
 {
-	// Used to nofity consumer thread that producer thread is terminated
-	auto done = std::atomic_bool{ false };
+    // Used to nofity consumer thread that producer thread is terminated
+    auto producer_done = std::atomic_bool{ false };
 
-	// Shared instance used to pass information from producer to consumer
-	auto items = std::vector<int>{};
+    // Shared instance used to pass information from producer to consumer
+    auto items = std::queue<int>{};
 
-	// Synchornization primitives
-	auto m = std::mutex{};
-	auto cv = std::condition_variable{};
+    // Synchornization primitives
+    auto m = std::mutex{};
+    auto cv = std::condition_variable{};
 
-	// Producer thread pushes an integer to items vector every 500ms
-	auto producer = std::thread([&] {
-		for (int i = 0; i < 3; ++i)
-		{
-			std::this_thread::sleep_for(std::chrono::milliseconds(500));
+    // Producer thread pushes an integer to items vector every 500ms
+    auto producer = std::thread([&] {
+        for (int i = 0; i < 3; ++i)
+        {
+            std::this_thread::sleep_for(std::chrono::milliseconds(500));
 
-			// Critical section
-			{
-				auto lg = std::lock_guard(m);
-				items.push_back(i);
-			}
+            // Critical section
+            {
+                auto lg = std::lock_guard(m);
+                items.push(i);
+            }
 
-			cv.notify_one();
-		}
+            cv.notify_one();
+        }
 
-		done = true;
-	});
+        producer_done = true;
+    });
 
-	// Consumer thread waits for items vector to fill up and print the content
-	auto consumer = std::thread([&] {
-		while (!done)
-		{
-			int item;
+    // Consumer thread waits for items vector to fill up and print the content
+    auto consumer = std::thread([&] {
+        auto exit = false;
+        while (!exit)
+        {
+            // 1. lock m.
+            auto ul = std::unique_lock(m);
 
-			// Critical section
-			{
-				// 1. lock m.
-				auto ul = std::unique_lock(m);
+            // 2. evaluate predicate (the lambda passed as the second parameter)
+            //    if the result is true, proceed to the next line (m stays locked)
+            //    if the result is false, unlock m and start waiting.
+            // 3. when a signal arrives, lock m and check predicate to see if it was a 'spurious wakeup'.
+            //    if the result is true, proceed to the next line (m stays locked)
+            //    if the result is false, unlock m and repeat step 3.
+            // 
+            // 'cv.wait(ul, pred)' is equivalent to 'while (!pred()) cv.wait(ul)'
+            // and this prevents two problems that come with condition variables.
+            // 
+            // 1) spurious wakeup
+            // - cv.wait(ul) can be unblocked even if we do not send any signal (not sure why...)
+            // - by using the conditional loop, we can go back to the waiting state on fake signals.
+            // 
+            // 2) lost wakeup: 
+            // - if no thread is waiting on cv.wait(), signals from notify_one() or notify_all() are lost.
+            // - if we use wait() without predicate, the thread is always blocked and will never wake up until new signal or spurious wakeup happens.
+            // - since conditional loop checks predicate before calling cv.wait(),
+            //   we can avoid blocking a thread forever even if some of the signals are lost.
+            cv.wait(ul, [&] { return items.size() > 0; });
 
-				// 2. unlock m and wait until cv receives signal.
-				// 3. lock m and evaluate predicate (the lambda passed as the second parameter)
-				//    to check if it was a 'spurious wakeup'.
-				// 3-1. if the result is false, unlock m and start waiting (return to step 2).
-				// 3-2. if the result is true, proceed to the next line (m stays locked).
-				//
-				// You should be careful if the consumer thread runs slower than the producer thread,
-				// because notify_one() and notify_all() DO NOT have any effect when no one is waiting!
-				// This means that some of the signals can be lost!
-				cv.wait(ul, [&] { return items.size() > 0; });
+            auto item = items.front();
+            items.pop();
 
-				item = items.back();
-				items.pop_back();
-			}
+            // Finish the loop if producer thread termiated and all the items are handled
+            if (producer_done && items.empty())
+            {
+                exit = true;
+            }
 
-			std::cout << item << std::endl;
-		}
-	});
+            ul.unlock();
 
-	producer.join();
-	consumer.join();
+            // Handle the item
+            std::cout << item << std::endl;
+        }
+    });
+
+    producer.join();
+    consumer.join();
 }
 
 // Desired behavior:
@@ -1416,42 +1431,42 @@ void wait_for_signal()
 // - render() should be called only after every update() is done
 void wait_for_tasks()
 {
-	constexpr auto num_workers = 3;
+    constexpr auto num_workers = 3;
 
-	// Create a barrier with initial count and a completion callback.
-	// Each arrive_and_wait() decreases the count by one
-	// and the callback gets called when the count reaches zero.
-	// Note: callback function should be 'noexcept'
-	auto sync_point = std::barrier(num_workers, []() noexcept {
-		std::cout << "everyone reached sync_point\n";
-	});
+    // Create a barrier with initial count and a completion callback.
+    // Each arrive_and_wait() decreases the count by one
+    // and the callback gets called when the count reaches zero.
+    // Note: callback function should be 'noexcept'
+    auto sync_point = std::barrier(num_workers, []() noexcept {
+        std::cout << "everyone reached sync_point\n";
+        });
 
-	// Create worker threads
-	auto workers = std::vector<std::thread>();
-	for (int i = 0; i < num_workers; ++i)
-	{
-		workers.push_back(std::thread([&, id = i] {
-			std::cout << std::format("worker thread #{} started\n", id);
-			std::this_thread::sleep_for(std::chrono::milliseconds(100 * id));
-			std::cout << std::format("worker thread #{} reached sync_point\n", id);
-			sync_point.arrive_and_wait();
-			std::cout << std::format("worker thread #{} ended\n", id);
-		}));
-	}
+    // Create worker threads
+    auto workers = std::vector<std::thread>();
+    for (int i = 0; i < num_workers; ++i)
+    {
+        workers.push_back(std::thread([&, id = i] {
+            std::cout << std::format("worker thread #{} started\n", id);
+            std::this_thread::sleep_for(std::chrono::milliseconds(100 * id));
+            std::cout << std::format("worker thread #{} reached sync_point\n", id);
+            sync_point.arrive_and_wait();
+            std::cout << std::format("worker thread #{} ended\n", id);
+            }));
+    }
 
-	for (auto& worker : workers)
-	{
-		worker.join();
-	}
+    for (auto& worker : workers)
+    {
+        worker.join();
+    }
 }
 
 int main()
 {
-	std::cout << "Example 1: waiting for a signal" << std::endl;
-	wait_for_signal();
+    std::cout << "Example 1: waiting for a signal" << std::endl;
+    wait_for_signal();
 
-	std::cout << "Example 2: waiting on a synchronization point" << std::endl;
-	wait_for_tasks();
+    std::cout << "Example 2: waiting on a synchronization point" << std::endl;
+    wait_for_tasks();
 }
 ```
 Expected output:
