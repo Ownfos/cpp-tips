@@ -1273,7 +1273,7 @@ exception safety를 위해 std::lock_guard나 std::unique_lock를 사용해주�
 #include <mutex>
 #include <barrier>
 #include <condition_variable>
-#include <vector>
+#include <queue>
 #include <atomic>
 #include <format>
 #include <iostream>
@@ -1294,64 +1294,81 @@ exception safety를 위해 std::lock_guard나 std::unique_lock를 사용해주�
 // - consumer 스레드는 큐에서 패킷을 하나씩 꺼내고 처리함
 void wait_for_signal()
 {
-	// producer 스레드가 끝났다고 알려주는 용도
-	auto done = std::atomic_bool{ false };
+    // producer 스레드가 끝났다고 알려주는 용도
+    auto producer_done = std::atomic_bool{ false };
 
-	// producer에서 consumer로 정보를 전달해주는 객체
-	auto items = std::vector<int>{};
+    // producer에서 consumer로 정보를 전달해주는 객체
+    auto items = std::queue<int>{};
 
-	// 동기화에 사용되는 객체
-	auto m = std::mutex{};
-	auto cv = std::condition_variable{};
+    // 동기화에 사용되는 객체
+    auto m = std::mutex{};
+    auto cv = std::condition_variable{};
 
-	// producer 스레드는 500ms마다 items에 숫자를 하나씩 넣습니다
-	auto producer = std::thread([&] {
-		for (int i = 0; i < 3; ++i)
-		{
-			std::this_thread::sleep_for(std::chrono::milliseconds(500));
+    // producer 스레드는 500ms마다 items에 숫자를 하나씩 넣습니다
+    auto producer = std::thread([&] {
+        for (int i = 0; i < 3; ++i)
+        {
+            std::this_thread::sleep_for(std::chrono::milliseconds(100));
 
-			// Critical section
-			{
-				auto lg = std::lock_guard(m);
-				items.push_back(i);
-			}
+            // Critical section
+            {
+                auto lg = std::lock_guard(m);
+                items.push(i);
+            }
 
-			cv.notify_one();
-		}
+            // m을 해제하기 전에 신호를 보내도 cv.wait()에서 lock에 성공할 때까지 기다리기 때문에 큰 문제는 없지만
+            // 이왕이면 바로 m을 잠글 수 있도록 해제한 상태에서 신호를 보내는게 좋다고 생각합니다.
+            cv.notify_one();
+        }
 
-		done = true;
-	});
+        producer_done = true;
+    });
 
-	// consumer 스레드는 items에 숫자가 들어올 때마다 하나씩 빼내고 출력합니다
-	auto consumer = std::thread([&] {
-		while (!done)
-		{
-			int item;
+    // consumer 스레드는 items에 숫자가 들어올 때마다 하나씩 빼내고 출력합니다
+    auto consumer = std::thread([&] {
+        auto exit = false;
+        while(!exit)
+        {
+            // 1. m을 잠금
+            auto ul = std::unique_lock(m);
 
-			// Critical section
-			{
-				// 1. m을 잠금
-				auto ul = std::unique_lock(m);
+            // 2. 두 번째 파라미터로 넘긴 predicate를 검사하고 만약 true를 리턴하면 다음 줄로 넘어감
+            //    false를 리턴한 경우 m을 해제하고 cv에 신호가 올때까지 기다림
+            // 3. 신호가 오면 m을 잠그고 두 번째 파라미터로 넘긴 조건을 검사해서 'spurious wakeup'이 아닌지 확인
+            //    만약 false를 리턴하면 다시 m을 해제하고 신호가 올때까지 기다림 (3번 반복)
+            //    만약 true를 리턴하면 m이 잠긴 상태로 다음 줄로 넘어감
+            // 
+            // cv.wait(ul, pred)는 while (!pred()) cv.wait(ul)과 동일하며 condition variable의 취약점 두 가지를 보완해줍니다.
+            // 
+            // 1) spurious wakeup
+            // - cv.wait(ul)은 신호를 보내지 않아도 블록이 해제될 수 있습니다 (정확한 원인은 저도 모르겠습니다...)
+            // - 조건 체크 루프를 사용하면 가짜 신호가 온 경우 다시 대기 상태로 만들 수 있습니다
+            // 
+            // 2) lost wakeup: 
+            // - wait()중인 스레드가 없는 경우 notify_one() 또는 notify_all()로 보낸 신호를 놓치게됩니다
+            // - predicate가 없는 wait을 사용하면 무조건 블록되며 signal이 오거나 spurious wakeup이 발생하지 않는 한 깨어나지 않습니다.
+            // - while (!pred()) 루프를 사용할 경우 wait 상태로 전환하기 전에 일단 조건을 체크하므로
+            //   신호를 놓치더라도 스레드가 영원히 블록되는 상황을 방지할 수 있습니다
+            cv.wait(ul, [&] { return items.size() > 0; });
 
-				// 2. m을 해제하고 cv에 신호가 올때까지 기다림
-				// 3. 신호가 오면 m을 잠그고 두 번째 파라미터로 넘긴 조건을 검사해서 'spurious wakeup'이 아닌지 확인
-				// 3-1. 만약 false를 리턴하면 다시 m을 해제하고 신호가 올때까지 기다림 (step 2로 돌아감)
-				// 3-2. 만약 true를 리턴하면 m이 잠긴 상태로 다음 줄로 넘어감
-				//
-				// wait()중인 스레드가 없는 경우 notify_one() 또는 notify_all()로 보낸 신호를 놓치게되므로
-				// consumer 스레드가 producer 스레드보다 느린 경우는 조심해야합니다.
-				cv.wait(ul, [&] { return items.size() > 0; });
+            auto item = items.front();
+            items.pop();
 
-				item = items.back();
-				items.pop_back();
-			}
+            // producer가 작업을 끝냈고 consumer도 items를 모두 처리했다면 루프 탈출
+            if (producer_done && items.empty())
+            {
+                exit = true;
+            }
 
-			std::cout << item << std::endl;
-		}
-	});
+            ul.unlock();
 
-	producer.join();
-	consumer.join();
+            // producer에서 넘겨준 값 처리
+            std::cout << item << std::endl;
+        }
+    });
+
+    producer.join();
+    consumer.join();
 }
 
 // 원하는 동작:
@@ -1370,42 +1387,42 @@ void wait_for_signal()
 // - render()는 모든 update()가 끝난 다음에 실행되어야 함
 void wait_for_tasks()
 {
-	constexpr auto num_workers = 3;
+    constexpr auto num_workers = 3;
 
-	// 초기 카운트와 완료 callback으로 barrier를 생성합니다
-	// arrive_and_wait()가 실행될 때마다 count가 줄어들고
-	// count가 0이 되는 순간 callback이 실행됩니다.
-	// Note: callback 함수는 'noexcept'이어야 합니다
-	auto sync_point = std::barrier(num_workers, []() noexcept {
-		std::cout << "everyone reached sync_point\n";
-	});
+    // 초기 카운트와 완료 callback으로 barrier를 생성합니다
+    // arrive_and_wait()가 실행될 때마다 count가 줄어들고
+    // count가 0이 되는 순간 callback이 실행됩니다.
+    // Note: callback 함수는 'noexcept'이어야 합니다
+    auto sync_point = std::barrier(num_workers, []() noexcept {
+        std::cout << "everyone reached sync_point\n";
+    });
 
-	// worker 스레드를 생성합니다
-	auto workers = std::vector<std::thread>();
-	for (int i = 0; i < num_workers; ++i)
-	{
-		workers.push_back(std::thread([&, id = i] {
-			std::cout << std::format("worker thread #{} started\n", id);
-			std::this_thread::sleep_for(std::chrono::milliseconds(100 * id));
-			std::cout << std::format("worker thread #{} reached sync_point\n", id);
-			sync_point.arrive_and_wait();
-			std::cout << std::format("worker thread #{} ended\n", id);
-		}));
-	}
+    // worker 스레드를 생성합니다
+    auto workers = std::vector<std::thread>();
+    for (int i = 0; i < num_workers; ++i)
+    {
+        workers.push_back(std::thread([&, id = i] {
+            std::cout << std::format("worker thread #{} started\n", id);
+            std::this_thread::sleep_for(std::chrono::milliseconds(100 * id));
+            std::cout << std::format("worker thread #{} reached sync_point\n", id);
+            sync_point.arrive_and_wait();
+            std::cout << std::format("worker thread #{} ended\n", id);
+        }));
+    }
 
-	for (auto& worker : workers)
-	{
-		worker.join();
-	}
+    for (auto& worker : workers)
+    {
+        worker.join();
+    }
 }
 
 int main()
 {
-	std::cout << "Example 1: waiting for a signal" << std::endl;
-	wait_for_signal();
+    std::cout << "Example 1: waiting for a signal" << std::endl;
+    wait_for_signal();
 
-	std::cout << "Example 2: waiting on a synchronization point" << std::endl;
-	wait_for_tasks();
+    std::cout << "Example 2: waiting on a synchronization point" << std::endl;
+    wait_for_tasks();
 }
 ```
 Expected output:
