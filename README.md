@@ -1378,9 +1378,9 @@ void wait_for_signal()
 				auto ul = std::unique_lock(m);
 
 				// 2. unlock m and wait until cv receives signal.
-				// 3. evaluate predicate (the lambda passed as the second parameter)
+				// 3. lock m and evaluate predicate (the lambda passed as the second parameter)
 				//    to check if it was a 'spurious wakeup'.
-				// 3-1. if the result is false, lock m and start waiting (return to step 2).
+				// 3-1. if the result is false, unlock m and start waiting (return to step 2).
 				// 3-2. if the result is true, proceed to the next line (m stays locked).
 				//
 				// You should be careful if the consumer thread runs slower than the producer thread,
