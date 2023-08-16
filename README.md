@@ -41,6 +41,7 @@ the features they've never knew or concepts which were misunderstood, while read
 - [Dynamic and static cast for smart pointers](#tip15)
 - [Three ways of overloading binary operators](#tip25)
 - [The meaning of 'qualified name' and 'unqualified access'](#tip18)
+- [Name mangling and extern "C"](#tip35)
 ### Initialization and Construction
 - [Initializing std::vector with initializer-list always invokes copy constructor](#tip1)
 - [const std::string& and std::string_view can also cause allocation](#tip2)
@@ -429,6 +430,31 @@ namespace Toolbox
         int triple(int val) { return val * three(); }
     }
 };
+```
+
+### <a name='tip35'></a>Name mangling and extern "C"
+```c++
+// C++ allows function overloading.
+// This means that there could be multiple functions with the same name but different parameters.
+// To let the compiler distinguish these symbols, C++ gives each function a new unique name.
+//
+// For example, appending the parameter type as a prefix should suffice to distinguish the two foo() below.
+// ex) foo(int) -> foo_i, foo(double) -> foo_d
+void foo(int);
+void foo(double);
+
+// By specifying extern "C", you can turn off name mangling.
+// This will make function overloading impossible, but the function will be usable in C projects.
+extern "C" void goo();
+
+// You can also use a scope to avoid writing extern "C" one by one.
+extern "C"
+{
+
+void haha();
+void hoho();
+
+}
 ```
 
 ## Initialization and Construction
