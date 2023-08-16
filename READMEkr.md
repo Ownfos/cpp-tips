@@ -12,6 +12,7 @@
 - [스마트 포인터를 위한 dynamic/static cast](#tip15)
 - [이항 연산자를 정의하는 세 가지 방법](#tip25)
 - ['qualified name'과 'unqualified access'의 의미](#tip18)
+- [name mangling과 extern "C"](#tip35)
 ### Initialization and Construction
 - [initializer-list를 사용한 std::vector초기화는 항상 복사 생성자를 호출합니다](#tip1)
 - [const std::string&와 std::string_view도 메모리 할당을 일으킬 수 있습니다](#tip2)
@@ -393,6 +394,30 @@ namespace Toolbox
         int triple(int val) { return val * three(); }
     }
 };
+```
+
+### <a name='tip35'></a>name mangling과 extern "C"
+```c++
+// C++는 함수 오버로딩을 허용하므로 이름이 같고 파라미터는 다른 함수가 여럿 존재할 수 있습니다.
+// 컴파일러는 이런 함수들을 식별할 방법이 필요하기 때문에 C++는 각각의 함수에 고유한 이름을 부여합니다.
+//
+// 예를 들어, 파라미터 타입의 첫 글자를 뒤에 붙인다면 아래에 있는 두 개의 foo()를 구분할 수 있을겁니다.
+// ex) foo(int) -> foo_i, foo(double) -> foo_d
+void foo(int);
+void foo(double);
+
+// 앞에 extern "C"를 붙여주면 name mangling을 사용하지 않을 수 있습니다.
+// 함수 오버로딩은 사용할 수 없게 되지만 C 프로젝트에서도 함수를 사용할 수 있게 됩니다.
+extern "C" void goo();
+
+// extern "C"를 일일이 붙여주는 대신 스코프를 지정할 수도 있습니다.
+extern "C"
+{
+
+void haha();
+void hoho();
+
+}
 ```
 
 ## Initialization and Construction
