@@ -13,6 +13,7 @@
 - [이항 연산자를 정의하는 세 가지 방법](#tip25)
 - ['qualified name'과 'unqualified access'의 의미](#tip18)
 - [name mangling과 extern "C"](#tip35)
+- [파라미터 타입으로 'auto' 사용하기](#tip36)
 ### Initialization and Construction
 - [initializer-list를 사용한 std::vector초기화는 항상 복사 생성자를 호출합니다](#tip1)
 - [const std::string&와 std::string_view도 메모리 할당을 일으킬 수 있습니다](#tip2)
@@ -417,6 +418,35 @@ extern "C"
 void haha();
 void hoho();
 
+}
+```
+
+### <a name='tip36'></a>파라미터 타입으로 'auto' 사용하기
+```c++
+// C++20부터 가능
+void foo(auto arg)
+{
+    std::cout << arg;
+}
+
+// 일반적인 템플릿과 함께 사용할 수 있습니다
+template<typename T>
+void goo(T first, auto... others)
+{
+    std::cout << first;
+}
+
+// 가변 인자와 perfect forwarding도 똑같이 쓸 수 있습니다
+void print(auto&&... args)
+{
+    // 쉼표를 연산자로 사용하는 fold expression이며 다음과 같이 확장됨
+    // (((std::cout << arg1 << " "), (std::cout << arg2 << " ")), ...)
+    ((std::cout << std::forward<decltype(args)>(args) << " "), ...);
+}
+
+int main()
+{
+    print("haha", 1234, 5.6); // Prints "haha 1234 5.6 "
 }
 ```
 
