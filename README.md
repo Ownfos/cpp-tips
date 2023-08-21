@@ -42,6 +42,7 @@ the features they've never knew or concepts which were misunderstood, while read
 - [Three ways of overloading binary operators](#tip25)
 - [The meaning of 'qualified name' and 'unqualified access'](#tip18)
 - [Name mangling and extern "C"](#tip35)
+- [Using 'auto' as parameter type](#tip36)
 ### Initialization and Construction
 - [Initializing std::vector with initializer-list always invokes copy constructor](#tip1)
 - [const std::string& and std::string_view can also cause allocation](#tip2)
@@ -454,6 +455,35 @@ extern "C"
 void haha();
 void hoho();
 
+}
+```
+
+### <a name='tip36'></a>Using 'auto' as parameter type
+```c++
+// Valid from C++20
+void foo(auto arg)
+{
+    std::cout << arg;
+}
+
+// Traditional template usage and 'auto' can coexist
+template<typename T>
+void goo(T first, auto... others)
+{
+    std::cout << first;
+}
+
+// You can also use variadic template and perfect forwarding
+void print(auto&&... args)
+{
+    // A fold expression using the comma operator that expands to
+    // (((std::cout << arg1 << " "), (std::cout << arg2 << " ")), ...)
+    ((std::cout << std::forward<decltype(args)>(args) << " "), ...);
+}
+
+int main()
+{
+    print("haha", 1234, 5.6); // Prints "haha 1234 5.6 "
 }
 ```
 
