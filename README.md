@@ -466,6 +466,13 @@ void foo(auto arg)
     std::cout << arg;
 }
 
+// This allows us to use concepts with minimal effort
+// Note: std::integral is a standard concept defined in header <concepts>
+auto square(std::integral auto value)
+{
+    return value * value;
+}
+
 // Traditional template usage and 'auto' can coexist
 template<typename T>
 void goo(T first, auto... others)
