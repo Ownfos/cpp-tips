@@ -429,6 +429,13 @@ void foo(auto arg)
     std::cout << arg;
 }
 
+// 이 기능을 사용하면 concept를 간편하게 사용할 수 있습니다
+// 참고: std::integral은 <concepts> 헤더에 정의된 표준 concept입니다
+auto square(std::integral auto value)
+{
+    return value * value;
+}
+
 // 일반적인 템플릿과 함께 사용할 수 있습니다
 template<typename T>
 void goo(T first, auto... others)
