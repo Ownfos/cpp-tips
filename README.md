@@ -43,6 +43,7 @@ the features they've never knew or concepts which were misunderstood, while read
 - [The meaning of 'qualified name' and 'unqualified access'](#tip18)
 - [Name mangling and extern "C"](#tip35)
 - [Using 'auto' as parameter type](#tip36)
+- [std::declval<T>()](#tip37)
 ### Initialization and Construction
 - [Initializing std::vector with initializer-list always invokes copy constructor](#tip1)
 - [const std::string& and std::string_view can also cause allocation](#tip2)
@@ -491,6 +492,76 @@ void print(auto&&... args)
 int main()
 {
     print("haha", 1234, 5.6); // Prints "haha 1234 5.6 "
+}
+```
+
+
+### <a name='tip37'></a>std::declval<T>()
+```c++
+#include <iostream>
+#include <concepts>
+
+// Suppose that we want to make a concept that checks
+// the existence of member function "Ret T::operator(Arg arg)".
+//
+// The concept proposed below does work
+// when T and Arg both have default constructors.
+// But what if they don't...?
+//
+// Although decltype() expression doesn't get evaluated,
+// invalid expressions will cause substitution failure!
+template<typename T, typename Ret, typename Arg>
+concept Function = std::is_same_v<decltype(T{}(Arg{})), Ret>;
+
+// std::declval<T>() comes in handy in such cases.
+// It returns an lvalue reference type without calling a constructor,
+// allowing us to assume that an instance of T exists!
+template<typename T, typename Ret, typename Arg>
+concept Function2 = std::is_same_v<decltype(std::declval<T>()(std::declval<Arg>())), Ret>;
+
+// We can also use the 'requires clause' to implement the same feature.
+// To make things more interesting,
+// let's make a concept for variadic functions.
+template<typename T, typename Ret, typename... Arg>
+concept Function3 = requires(T func) {
+    { func(std::declval<Arg>()...) } -> std::same_as<Ret>;
+};
+
+// A test function that only accepts instances with
+// member function "void operator()(std::string_view)"
+template<typename T>
+    requires Function3<T, void, std::string_view>
+void test(T func) {
+    func("wow this works!");
+}
+
+// A test functor that doesn't have a default constructor
+class PrintMultipleTimes
+{
+public:
+    PrintMultipleTimes(int repeat) : repeat(repeat) {}
+
+    void operator()(std::string_view message)
+    {
+        for (int i = 0; i < repeat; ++i)
+        {
+            std::cout << message << std::endl;
+        }
+    }
+
+private:
+    int repeat;
+};
+
+int main()
+{
+    // Works with lambda
+    test([](std::string_view s) {
+        std::cout << s << std::endl;
+    });
+
+    // Also works with objects that cannot be default-constructed
+    test(PrintMultipleTimes(3));
 }
 ```
 
