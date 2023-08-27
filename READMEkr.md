@@ -14,6 +14,7 @@
 - ['qualified name'과 'unqualified access'의 의미](#tip18)
 - [name mangling과 extern "C"](#tip35)
 - [파라미터 타입으로 'auto' 사용하기](#tip36)
+- [```std::declval<T>()```](#tip37)
 ### Initialization and Construction
 - [initializer-list를 사용한 std::vector초기화는 항상 복사 생성자를 호출합니다](#tip1)
 - [const std::string&와 std::string_view도 메모리 할당을 일으킬 수 있습니다](#tip2)
@@ -454,6 +455,72 @@ void print(auto&&... args)
 int main()
 {
     print("haha", 1234, 5.6); // Prints "haha 1234 5.6 "
+}
+```
+
+### <a name='tip37'></a>```std::declval<T>()```
+```c++
+#include <iostream>
+#include <concepts>
+
+// "Ret T::operator(Arg arg)"이라는 멤버 함수가
+// 존재하는지 확인하는 concept를 만든다고 가정합니다.
+//
+// 아래에 나와있는 concept는 T와 Arg에 기본 생성자가 있다면 잘 작동합니다.
+// 하지만 그렇지 않다면 어떻게 될까요?
+//
+// decltype()안에 들어간 식은 계산되지 않지만,
+// 애초에 올바르지 않은 식이 되어버리므로 치환에 실패하게됩니다!
+template<typename T, typename Ret, typename Arg>
+concept Function = std::is_same_v<decltype(T{}(Arg{})), Ret>;
+
+// 이런 경우에는 std::declval<T>()이 매우 유용합니다.
+// 생성자를 호출하지 않고 바로 lvalue reference를 반환해주기때문에
+// 저희는 그냥 T의 인스턴스가 존재한다고 가정하고 식을 작성할 수 있습니다.
+template<typename T, typename Ret, typename Arg>
+concept Function2 = std::is_same_v<decltype(std::declval<T>()(std::declval<Arg>())), Ret>;
+
+// 'requires clause'를 사용해도 같은 기능을 구현할 수 있습니다.
+// 예시를 조금 더 흥미롭게 만들기 위해 이번에는 가변인자 함수를 위한 concept를 만들어보겠습니다.
+template<typename T, typename Ret, typename... Arg>
+concept Function3 = requires(T func) {
+    { func(std::declval<Arg>()...) } -> std::same_as<Ret>;
+};
+
+// 멤버 함수 "void operator()(std::string_view)"를 갖는 객체만 받는 테스트 함수
+template<typename T>
+    requires Function3<T, void, std::string_view>
+void test(T func) {
+    func("wow this works!");
+}
+
+// 기본 생성자가 없는 테스트용 functor
+class PrintMultipleTimes
+{
+public:
+    PrintMultipleTimes(int repeat) : repeat(repeat) {}
+
+    void operator()(std::string_view message)
+    {
+        for (int i = 0; i < repeat; ++i)
+        {
+            std::cout << message << std::endl;
+        }
+    }
+
+private:
+    int repeat;
+};
+
+int main()
+{
+    // 람다 사용 가능
+    test([](std::string_view s) {
+        std::cout << s << std::endl;
+    });
+
+    // 기본 생성자가 없는 경우에도 사용 가능
+    test(PrintMultipleTimes(3));
 }
 ```
 
