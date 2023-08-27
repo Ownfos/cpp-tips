@@ -43,7 +43,7 @@ the features they've never knew or concepts which were misunderstood, while read
 - [The meaning of 'qualified name' and 'unqualified access'](#tip18)
 - [Name mangling and extern "C"](#tip35)
 - [Using 'auto' as parameter type](#tip36)
-- [std::declval<T>()](#tip37)
+- [```std::declval<T>()```](#tip37)
 ### Initialization and Construction
 - [Initializing std::vector with initializer-list always invokes copy constructor](#tip1)
 - [const std::string& and std::string_view can also cause allocation](#tip2)
@@ -496,7 +496,7 @@ int main()
 ```
 
 
-### <a name='tip37'></a>std::declval<T>()
+### <a name='tip37'></a>```std::declval<T>()```
 ```c++
 #include <iostream>
 #include <concepts>
