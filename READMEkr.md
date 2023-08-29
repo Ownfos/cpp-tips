@@ -46,6 +46,7 @@
 - [람다를 만드는 것은 operator()를 정의한 구조체를 만드는 것과 비슷합니다](#tip3)
 - [멤버 변수의 타입을 결정하는 법](#tip32)
 - [```set(CMAKE_CXX_STANDARD ??)```는 꼭 ```project()``` 뒤에 나와야합니다](#tip33)
+- [ranges 라이브러리로 기본적인 command-line argument parser 만드는 방법](#tip38)
 
 ## Language Features
 ### <a name='tip5'></a>Trailing return type
@@ -1910,4 +1911,78 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED True)
 
 add_executable(test main.cpp)
+```
+
+### <a name='tip38'></a>ranges 라이브러리로 기본적인 command-line argument parser 만드는 방법
+```c++
+#include <iostream>
+#include <optional>
+#include <ranges>
+#include <vector>
+#include <format>
+
+struct Argument
+{
+    std::string name;
+    std::optional<std::string> value = {};
+};
+
+// 주어진 command-line 입력의 argument token을 주는 range를 반환합니다.
+// 
+// 연속되는 공백과 첫 번째 token은 무시됩니다.
+// ex) "asdf.exe a    b c  d" -> "a" "b" "c" "d"
+auto split_tokens(std::string_view prompt_input)
+{
+    auto is_not_empty = [](auto subrange) {
+        return subrange.size() > 0;
+    };
+    auto to_string_view = [](auto subrange) {
+        return std::string_view(subrange);
+    };
+
+    return prompt_input
+        | std::views::split(' ')
+        | std::views::filter(is_not_empty) // 연속적인 공백이 빈 range를 생성하지 않도록 막습니다
+        | std::views::drop(1) // 첫 번째 토큰은 프로그램의 이름이므로 무시합니다
+        | std::views::transform(to_string_view);
+}
+
+// 주어진 command-line 입력을 파싱해서 name-value 쌍의 목록을 반환합니다.
+// argument의 이름은 '-'로 시작하고 옵션의 값은 바로 뒤에 온다고 가정합니다.
+//
+// 참고: ranges 라이브러리의 기능 소개에 집중하기 위해 오류 처리는 의도적으로 생략했습니다
+std::vector<Argument> parse_arguments(std::string_view prompt_input)
+{
+    auto arguments = std::vector<Argument>();
+    for (auto token : split_tokens(prompt_input))
+    {
+        // 새로운 argument의 이름
+        if (token.starts_with('-'))
+        {
+            token.remove_prefix(1);
+            arguments.emplace_back(std::string(token)); 
+        }
+        // argument의 값
+        else
+        {
+            arguments.back().value = token;
+        }
+    }
+
+    return arguments;
+}
+
+int main()
+{
+    for (const auto& [name, value] : parse_arguments("cmake -S . -B build -Wno-dev"))
+    {
+        std::cout << std::format("name: {:<8} value: {}\n", name, value.value_or("none"));
+    }
+}
+```
+예상되는 출력:
+```
+name: S        value: .
+name: B        value: build
+name: Wno-dev  value: none
 ```
