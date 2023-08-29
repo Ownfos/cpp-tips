@@ -1996,7 +1996,7 @@ auto split_tokens(std::string_view prompt_input)
 
     return prompt_input
         | std::views::split(' ')
-        | std::views::filter(is_not_empty) // Ignore consecutive ' ' from generating empty subranges.
+        | std::views::filter(is_not_empty) // Prevent consecutive ' ' from generating empty subranges.
         | std::views::drop(1) // We should ignore the first token, which is the name of an executable.
         | std::views::transform(to_string_view);
 }
