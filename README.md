@@ -75,6 +75,7 @@ the features they've never knew or concepts which were misunderstood, while read
 - [Creating a lambda behaves the same as creating a struct with operator() overloaded](#tip3)
 - [A simple yes/no guideline for deciding member variable type](#tip32)
 - [Make sure that ```set(CMAKE_CXX_STANDARD ??)``` comes after ```project()```](#tip33)
+- [How to make a basic command-line argument parser with ranges library](#tip38)
 
 ## Language Features
 ### <a name='tip5'></a>Trailing return type
@@ -1963,4 +1964,82 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED True)
 
 add_executable(test main.cpp)
+```
+
+### <a name='tip38'></a>How to make a basic command-line argument parser with ranges library
+```c++
+#include <iostream>
+#include <optional>
+#include <ranges>
+#include <vector>
+#include <format>
+
+struct Argument
+{
+    std::string name;
+    std::optional<std::string> value = {};
+};
+
+// Returns an iterable range of std::string_view
+// that contains argument tokens of a command line input.
+// 
+// Consecutive blanks and the initial token are ignored.
+// ex) "asdf.exe a    b c  d" -> "a" "b" "c" "d"
+auto split_tokens(std::string_view prompt_input)
+{
+    auto is_not_empty = [](auto subrange) {
+        return subrange.size() > 0;
+    };
+    auto to_string_view = [](auto subrange) {
+        return std::string_view(subrange);
+    };
+
+    return prompt_input
+        | std::views::split(' ')
+        | std::views::filter(is_not_empty) // Ignore consecutive ' ' from generating empty subranges.
+        | std::views::drop(1) // We should ignore the first token, which is the name of an executable.
+        | std::views::transform(to_string_view);
+}
+
+// Parse the command line input into a list of name-value pairs.
+// 
+// We assume that argument names are prefixed with '-'
+// and the value for an argument comes right after the name.
+// 
+// Note: exception handling was intentionally skipped
+//       in order to focus solely on library feature demonstration.
+std::vector<Argument> parse_arguments(std::string_view prompt_input)
+{
+    auto arguments = std::vector<Argument>();
+    for (auto token : split_tokens(prompt_input))
+    {
+        // New argument name
+        if (token.starts_with('-'))
+        {
+            token.remove_prefix(1);
+            arguments.emplace_back(std::string(token)); 
+        }
+        // Argument value
+        else
+        {
+            arguments.back().value = token;
+        }
+    }
+
+    return arguments;
+}
+
+int main()
+{
+    for (const auto& [name, value] : parse_arguments("cmake -S . -B build -Wno-dev"))
+    {
+        std::cout << std::format("name: {:<8} value: {}\n", name, value.value_or("none"));
+    }
+}
+```
+Expected output:
+```
+name: S        value: .
+name: B        value: build
+name: Wno-dev  value: none
 ```
