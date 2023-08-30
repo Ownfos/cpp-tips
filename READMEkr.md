@@ -15,6 +15,7 @@
 - [name mangling과 extern "C"](#tip35)
 - [파라미터 타입으로 'auto' 사용하기](#tip36)
 - [```std::declval<T>()```](#tip37)
+- [멤버 함수/변수 포인터](#tip39)
 ### Initialization and Construction
 - [initializer-list를 사용한 std::vector초기화는 항상 복사 생성자를 호출합니다](#tip1)
 - [const std::string&와 std::string_view도 메모리 할당을 일으킬 수 있습니다](#tip2)
@@ -522,6 +523,36 @@ int main()
 
     // 기본 생성자가 없는 경우에도 사용 가능
     test(PrintMultipleTimes(3));
+}
+```
+
+### <a name='tip39'></a>멤버 함수/변수 포인터
+```c++
+struct Test
+{
+    int mem_var;
+
+    int mem_func(double, bool) {}
+};
+
+int main()
+{
+    auto test = Test{};
+
+    // 타입 해석하는 과정:
+    // 1. *mem_func_ptr ==> mem_func_ptr는 포인터이다
+    // 2. Test::*mem_func_ptr ==> ... 포인터는 Test의 멤버를 가리킨다
+    // 3. (Test::*mem_func_ptr)(double, bool) ==> ... 그 멤버는 double과 bool을 파라미터로 받는 함수이다
+    // 4. int (Test::*mem_func_ptr)(double, bool) ==> ... 함수의 리턴 타입은 int이다
+    int (Test::*mem_func_ptr)(double, bool) = &Test::mem_func;
+
+    // 위의 예시와 비슷하게, mem_var_ptr의 타입은 다음과 같은 의미를 갖습니다.
+    // mem_var_ptr는 포인터이며 가리키는 대상은 Test의 멤버이고 그 멤버의 타입은 int이다.
+    int Test::*mem_var_ptr = &Test::mem_var;
+
+    // 포인터로 멤버 함수/변수에 접근하는 방법
+    (test.*mem_func_ptr)(1.0, true); // test.mem_func(1.0, true);
+    test.*mem_var_ptr = 4567; // test.mem_var = 4567;
 }
 ```
 
