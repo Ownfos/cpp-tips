@@ -44,6 +44,7 @@ the features they've never knew or concepts which were misunderstood, while read
 - [Name mangling and extern "C"](#tip35)
 - [Using 'auto' as parameter type](#tip36)
 - [```std::declval<T>()```](#tip37)
+- [Member function/variable pointer](#tip39)
 ### Initialization and Construction
 - [Initializing std::vector with initializer-list always invokes copy constructor](#tip1)
 - [const std::string& and std::string_view can also cause allocation](#tip2)
@@ -563,6 +564,36 @@ int main()
 
     // Also works with objects that cannot be default-constructed
     test(PrintMultipleTimes(3));
+}
+```
+
+### <a name='tip39'></a>Member function/variable pointer
+```c++
+struct Test
+{
+    int mem_var;
+
+    int mem_func(double, bool) {}
+};
+
+int main()
+{
+    auto test = Test{};
+
+    // How to understand the type step by step:
+    // 1. *mem_func_ptr ==> fp is a pointer
+    // 2. Test::*mem_func_ptr ==> ... to a member of Test
+    // 3. (Test::*mem_func_ptr)(double, bool) ==> ... which is a function with double and bool arguments
+    // 4. int (Test::*mem_func_ptr)(double, bool) ==> ... that returns int
+    int (Test::*mem_func_ptr)(double, bool) = &Test::mem_func;
+
+    // Similar to the example above, the type of mp implies that
+    // mem_var_ptr is a pointer to a member of Test which is an integer.
+    int Test::*mem_var_ptr = &Test::mem_var;
+
+    // Using the pointers to access member function/variable.
+    (test.*mem_func_ptr)(1.0, true); // test.mem_func(1.0, true);
+    test.*mem_var_ptr = 4567; // test.mem_var = 4567;
 }
 ```
 
