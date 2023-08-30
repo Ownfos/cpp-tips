@@ -581,13 +581,13 @@ int main()
     auto test = Test{};
 
     // How to understand the type step by step:
-    // 1. *mem_func_ptr ==> fp is a pointer
+    // 1. *mem_func_ptr ==> mem_func_ptr is a pointer
     // 2. Test::*mem_func_ptr ==> ... to a member of Test
     // 3. (Test::*mem_func_ptr)(double, bool) ==> ... which is a function with double and bool arguments
     // 4. int (Test::*mem_func_ptr)(double, bool) ==> ... that returns int
     int (Test::*mem_func_ptr)(double, bool) = &Test::mem_func;
 
-    // Similar to the example above, the type of mp implies that
+    // Similar to the example above, the type of mem_var_ptr implies that
     // mem_var_ptr is a pointer to a member of Test which is an integer.
     int Test::*mem_var_ptr = &Test::mem_var;
 
