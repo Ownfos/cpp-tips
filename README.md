@@ -77,6 +77,7 @@ the features they've never knew or concepts which were misunderstood, while read
 - [A simple yes/no guideline for deciding member variable type](#tip32)
 - [Make sure that ```set(CMAKE_CXX_STANDARD ??)``` comes after ```project()```](#tip33)
 - [How to make a basic command-line argument parser with ranges library](#tip38)
+- [Do not use 'using namespace' in headers](#tip40)
 
 ## Language Features
 ### <a name='tip5'></a>Trailing return type
@@ -2073,4 +2074,65 @@ Expected output:
 name: S        value: .
 name: B        value: build
 name: Wno-dev  value: none
+```
+
+### <a name='tip40'></a>Do not use 'using namespace' in headers
+- Namespace is very useful for preventing name collisions, but this makes qualified names quite long and verbose.
+- ```using namespace ...``` allows unqualified access to the namespace, but this leads to potential name collision.
+- The real problem happens when you use ```using namespace``` in a header.
+Every source file that uses the header also has access to symbols inside that namespace whether they want it or not.
+- On the other hand, ```using namespace``` in a cpp file isn't a big problem.  
+  It only affects a single file and is easy to fix.
+#### Example scenario
+- Suppose that you have two "vector" classes: std::vector and math::vector.
+```c++
+// vector.h
+namespace math
+{
+
+template<typename T>
+class vector
+{
+public:
+    vector(T x, T y, T z);
+};
+
+} // namespace math
+```
+- One developer starts to use ```using namespace math``` in a header file because prefix ```math::``` was all over the place.
+```c++
+// rigidbody.h
+using namespace math;
+
+namespace physics
+{
+
+class rigidbody
+{
+public:
+    rigidbody(double mass, const vector<double>& position, const vector<double>& rotation);
+    void add_force(const vector<double>& force);
+
+private:
+    double mass;
+    vector<double> position;
+    vector<double> rotation;
+    vector<double> velocity;
+};
+
+} // namespace physics
+```
+- You, on the other hand, were working on another source file that uses rigidbody.h  
+  and discovered that your 'vector' suddenly became ambiguous!
+```c++
+// main.cpp
+#include "rigidbody.h"
+#include <vector>
+
+using namespace std;
+
+int main()
+{
+    vector<rigidbody> objects; // error: 'vector' is ambiguous
+}
 ```
