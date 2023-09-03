@@ -48,6 +48,7 @@
 - [멤버 변수의 타입을 결정하는 법](#tip32)
 - [```set(CMAKE_CXX_STANDARD ??)```는 꼭 ```project()``` 뒤에 나와야합니다](#tip33)
 - [ranges 라이브러리로 기본적인 command-line argument parser 만드는 방법](#tip38)
+- [헤더 파일에서는 using namespace를 사용하지 않는 것이 좋습니다](#tip40)
 
 ## Language Features
 ### <a name='tip5'></a>Trailing return type
@@ -2016,4 +2017,64 @@ int main()
 name: S        value: .
 name: B        value: build
 name: Wno-dev  value: none
+```
+
+### <a name='tip40'></a>헤더 파일에서는 using namespace를 사용하지 않는 것이 좋습니다
+- namespace는 이름 충돌을 막아줘서 유용하지만 이름이 길어져서 번거롭다는 단점이 있습니다.
+- ```using namespace ...```를 사용하면 unqualified access가 가능하지만 이름 충돌을 일으킬 위험을 내포합니다.
+- 진짜 문제는 이걸 헤더 파일에서 사용할 때 일어납니다.  
+그 헤더 파일을 사용하는 다른 모든 소스에서 해당 namespace가 원하든 원치 않든 밖으로 공개되기 때문이죠.
+- 반대로 ```using namespace```를 cpp파일에서 사용하는건 별로 문제가 되지 않습니다.  
+하나의 파일에만 영향을 주고 설령 문제가 생기더라고 고치기 쉽기 때문입니다.
+#### 문제 상황 예시
+- 예를 들어, 우리가 std::vector와 math::vector라는 두 개의 vector를 사용한다고 가정합시다.
+```c++
+// vector.h
+namespace math
+{
+
+template<typename T>
+class vector
+{
+public:
+    vector(T x, T y, T z);
+};
+
+} // namespace math
+```
+- 어느날 한 개발자가 ```math::```가 너무 많다는 이유로 ```using namespace math```를 넣어버립니다
+```c++
+// rigidbody.h
+using namespace math;
+
+namespace physics
+{
+
+class rigidbody
+{
+public:
+    rigidbody(double mass, const vector<double>& position, const vector<double>& rotation);
+    void add_force(const vector<double>& force);
+
+private:
+    double mass;
+    vector<double> position;
+    vector<double> rotation;
+    vector<double> velocity;
+};
+
+} // namespace physics
+```
+- rigidbody.h를 사용하는 다른 소스에서 작업하던 당신은 갑자기 vector가 모호하다는 에러를 발견합니다!
+```c++
+// main.cpp
+#include "rigidbody.h"
+#include <vector>
+
+using namespace std;
+
+int main()
+{
+    vector<rigidbody> objects; // error: 'vector' is ambiguous
+}
 ```
