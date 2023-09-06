@@ -1997,6 +1997,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED True)
 
 add_executable(test main.cpp)
 ```
+- Note: ```target_compile_features(test PUBLIC cxx_std_17)``` is preferred over ```set(CMAKE_CXX_STANDARD 17)```
 
 ### <a name='tip38'></a>How to make a basic command-line argument parser with ranges library
 ```c++
