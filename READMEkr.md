@@ -1944,6 +1944,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED True)
 
 add_executable(test main.cpp)
 ```
+- 참고: ```target_compile_features(test PUBLIC cxx_std_17)```가 ```set(CMAKE_CXX_STANDARD 17)```에 비해 권장되는 방법입니다
 
 ### <a name='tip38'></a>ranges 라이브러리로 기본적인 command-line argument parser 만드는 방법
 ```c++
