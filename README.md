@@ -65,7 +65,7 @@ the features they've never knew or concepts which were misunderstood, while read
 - [The reason why using static_cast for downcast is unsafe](#tip16)
 - [Mutability of captured variables in a lambda](#tip28)
 - [std::vector<bool> doesn't store booleans](#tip30)
-- [Bad practice: passing int as an enum class parameter](#tip41)
+- [A malicious bypass: passing int as an enum class parameter](#tip41)
 ### Concurrency
 - [Manually locking and unlocking a mutex can be dangerous](#tip29)
 - [How to wait for a signal or create a synchronization point for multiple threads](#tip34)
