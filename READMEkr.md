@@ -36,6 +36,7 @@
 - [static_cast로 하는 downcasting이 위험한 이유](#tip16)
 - [람다에서 캡처한 변수의 mutability](#tip28)
 - [std::vector<bool>은 bool을 저장하지 않습니다](#tip30)
+- [악의적인 우회: int를 enum class 타입의 파라미터에 넘기기](#tip41)
 ### Concurrency
 - [뮤텍스를 수동으로 잠그고 푸는 것은 위험합니다](#tip29)
 - [멀티스레딩을 할 때 특정 신호를 기다리거나 동기화 지점을 만드는 방법](#tip34)
@@ -1381,6 +1382,24 @@ int main()
 }
 ```
 [Microsoft's C++ documentation](https://learn.microsoft.com/en-us/cpp/standard-library/vector-bool-class?view=msvc-170)에도 해당 내용이 명시되어있습니다.
+
+### <a name='tip41'></a>악의적인 우회: int를 enum class 타입의 파라미터로 넘기기
+```c++
+enum class Animal { Dog, Cat };
+
+void foo(Animal animal) {}
+
+int main()
+{
+    // enum class를 사용하면 int에서 Animal로의 implicit conversion이 불가능해집니다
+    foo(123); // Error: cannot convert from int to Animal
+
+    // 하지만 어째서인지 아래 코드는 컴파일 및 실행이 가능합니다.
+    // 대체 왜 이게 허락된걸까요...?
+    // enum 대신 enum class를 사용하더라도 이상한 값을 넘길 수 있다는 정도로만 알아두면 될 것 같습니다.
+    foo(Animal{123});
+}
+```
 
 ## Concurrency
 ### <a name='tip29'></a>뮤텍스를 수동으로 잠그고 푸는 것은 위험합니다
