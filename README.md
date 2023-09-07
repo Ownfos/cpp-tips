@@ -45,6 +45,7 @@ the features they've never knew or concepts which were misunderstood, while read
 - [Using 'auto' as parameter type](#tip36)
 - [```std::declval<T>()```](#tip37)
 - [Member function/variable pointer](#tip39)
+- [Making return values more noticeable with ```[[nodiscard]]```](#tip42)
 ### Initialization and Construction
 - [Initializing std::vector with initializer-list always invokes copy constructor](#tip1)
 - [const std::string& and std::string_view can also cause allocation](#tip2)
@@ -598,6 +599,93 @@ int main()
     test.*mem_var_ptr = 4567; // test.mem_var = 4567;
 }
 ```
+
+### <a name='tip42'></a>Making return values more noticeable with ```[[nodiscard]]```
+```c++
+// [[nodiscard]] is an attribute that tells the compiler
+// to warn you whenever a return value is not used.
+//
+// This could be useful when ignoring the return value makes
+// the function call useless or cause problems like memory leak.
+[[nodiscard]] bool is_empty();
+
+void foo()
+{
+    is_empty(); // Warning: return value ignored
+}
+```
+- [stackoverflow - why clang tidy suggests to add nodiscard everywhere](https://stackoverflow.com/questions/67059884/why-clang-tidy-suggests-to-add-nodiscard-everywhere)
+<details>
+    <summary>Example scenario where ignoring a return value leads to a dangling pointer problem</summary>
+
+```c++
+#include <functional>
+#include <memory>
+
+template<typename T>
+class Event
+{
+public:
+    // Add an event handler and return its ID.
+    // The ID should be used to unregister the callback
+    // when it no longer needs to subscribe.
+    /*[[nodiscard]]*/ int register_callback(std::function<void(T)>&& callback)
+    {
+        /* ... */
+        return callback_id;
+    }
+
+    // Remove an event handler with specified callback ID.
+    void unregister_callback(int callback_id)
+    {
+        /* ... */
+    }
+
+    // Invoke registered callbacks.
+    void signal(T arg)
+    {
+        /* ... */
+    }
+};
+
+class Player
+{
+public:
+    Player(Event<int>& on_enemy_attack)
+    {
+        // We forgot to use the return value!
+        // Things will get messy when the event outlives this instance,
+        // but currently there is no way we can notice the danger
+        // before we actually run into a bug.
+        on_enemy_attack.register_callback([this](int damage){
+            hp -= damage;
+        });
+    }
+
+private:
+    int hp = 100;
+};
+
+// Suppose that we are making an action game.
+int main()
+{
+    // This will be invoked whenever an enemy tries to attack the player.
+    auto on_enemy_attack = Event<int>();
+
+    // Player gets spawned on the map and start fighting.
+    auto player = std::make_shared<Player>(on_enemy_attack);
+
+    // During combat, the player dies and the object gets destroyed.
+    player.reset();
+
+    // Right after the player's death,
+    // a delayed attack from an enemy triggers on_enemy_attack.
+    // Since the callback registered by player still remains,
+    // now we face a dangling pointer/reference problem.
+    on_enemy_attack.signal(10);
+}
+```
+</details>
 
 ## Initialization and Construction
 ### <a name='tip1'></a>Initializing std::vector with initializer-list always invokes copy constructor

@@ -16,6 +16,7 @@
 - [파라미터 타입으로 'auto' 사용하기](#tip36)
 - [```std::declval<T>()```](#tip37)
 - [멤버 함수/변수 포인터](#tip39)
+- [```[[nodiscard]]```로 리턴 값을 무시하기 어렵게 만들기](#tip42)
 ### Initialization and Construction
 - [initializer-list를 사용한 std::vector초기화는 항상 복사 생성자를 호출합니다](#tip1)
 - [const std::string&와 std::string_view도 메모리 할당을 일으킬 수 있습니다](#tip2)
@@ -557,6 +558,88 @@ int main()
     test.*mem_var_ptr = 4567; // test.mem_var = 4567;
 }
 ```
+
+### <a name='tip42'></a>```[[nodiscard]]```로 리턴 값을 무시하기 어렵게 만들기
+```c++
+// [[nodiscard]]를 사용하면 리턴 값을 사용하지 않았을 때 warning을 출력하도록 할 수 있습니다.
+//
+// 리턴 값을 사용하지 않으면 함수 호출이 무의미하거나
+// 메모리 누수 등 치명적인 문제를 일으키는 경우 유용합니다.
+[[nodiscard]] bool is_empty();
+
+void foo()
+{
+    is_empty(); // Warning: return value ignored
+}
+```
+- [stackoverflow - why clang tidy suggests to add nodiscard everywhere](https://stackoverflow.com/questions/67059884/why-clang-tidy-suggests-to-add-nodiscard-everywhere)
+<details>
+    <summary>리턴 값을 사용하지 않아서 dangling pointer 문제가 생기는 예시 상황</summary>
+
+```c++
+#include <functional>
+#include <memory>
+
+template<typename T>
+class Event
+{
+public:
+    // 이벤트 핸들러를 추가하고 콜백 함수의 ID를 반환합니다
+    /*[[nodiscard]]*/ int register_callback(std::function<void(T)>&& callback)
+    {
+        /* ... */
+        return callback_id;
+    }
+
+    // 특정 ID를 가진 이벤트 핸들러를 제거합니다.
+    void unregister_callback(int callback_id)
+    {
+        /* ... */
+    }
+
+    // 등록된 이벤트 핸들러를 모두 호출합니다.
+    void signal(T arg)
+    {
+        /* ... */
+    }
+};
+
+class Player
+{
+public:
+    Player(Event<int>& on_enemy_attack)
+    {
+        // 리턴 값을 사용하는 것을 잊어버렸습니다!
+        // 나중에 event가 이 객체보다 오래 사는 순간이 오면 문제가 생기겠지만,
+        // 지금으로선 직접 버그를 마주치기 전에 문제가 있다는걸 알아차릴 방법이 없습니다
+        on_enemy_attack.register_callback([this](int damage){
+            hp -= damage;
+        });
+    }
+
+private:
+    int hp = 100;
+};
+
+// 우리가 액션 게임을 만들고 있다고 상상해봅시다
+int main()
+{
+    // 적이 플레이어를 공격하려 할때마다 이 이벤트가 호출됩니다.
+    auto on_enemy_attack = Event<int>();
+
+    // 플레이어는 맵에 스폰되고 전투를 시작합니다.
+    auto player = std::make_shared<Player>(on_enemy_attack);
+
+    // 전투 도중 플레이어가 사망하고 플레이어 오브젝트가 삭제됩니다.
+    player.reset();
+
+    // 플레이어가 사망한 직후, 약간의 딜레이를 가진 적의 공격이 on_enemy_attack을 trigger해버립니다.
+    // 플레이어 오브젝트는 사라졌지만 callback은 남아있기 때문에
+    // 여기서 dangling pointer 문제가 발생하게 됩니다.
+    on_enemy_attack.signal(10);
+}
+```
+</details>
 
 ## Initialization and Construction
 ### <a name='tip1'></a>initializer-list를 사용한 std::vector초기화는 항상 복사 생성자를 호출합니다
