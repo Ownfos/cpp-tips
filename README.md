@@ -65,6 +65,7 @@ the features they've never knew or concepts which were misunderstood, while read
 - [The reason why using static_cast for downcast is unsafe](#tip16)
 - [Mutability of captured variables in a lambda](#tip28)
 - [std::vector<bool> doesn't store booleans](#tip30)
+- [Bad practice: passing int as an enum class parameter](#tip41)
 ### Concurrency
 - [Manually locking and unlocking a mutex can be dangerous](#tip29)
 - [How to wait for a signal or create a synchronization point for multiple threads](#tip34)
@@ -1430,6 +1431,25 @@ int main()
 }
 ```
 This is also stated in [Microsoft's C++ documentation](https://learn.microsoft.com/en-us/cpp/standard-library/vector-bool-class?view=msvc-170).
+
+### <a name='tip41'></a>A malicious bypass: passing int as an enum class parameter
+```c++
+enum class Animal { Dog, Cat };
+
+void foo(Animal animal) {}
+
+int main()
+{
+    // We know that enum class doesn't allow implicit conversion from int
+    foo(123); // Error: cannot convert from int to Animal
+
+    // But for some reason, this also compiles.
+    // Actually, I wonder why this is valid...
+    // Just keep in mind that strange things can happen
+    // even if you use enum class instead of classic enum.
+    foo(Animal{123});
+}
+```
 
 ## Concurrency
 ### <a name='tip29'></a>Manually locking and unlocking a mutex can be dangerous
