@@ -70,6 +70,7 @@ the features they've never knew or concepts which were misunderstood, while read
 ### Concurrency
 - [Manually locking and unlocking a mutex can be dangerous](#tip29)
 - [How to wait for a signal or create a synchronization point for multiple threads](#tip34)
+- [Printing to std::cout without race condition](#tip43)
 ### Other Tips
 - [Using nested symbol of a template type as a type name](#tip22)
 - [Declaring variables inside a switch statement](#tip17)
@@ -1761,6 +1762,34 @@ everyone reached sync_point
 worker thread #1 ended
 worker thread #2 ended
 worker thread #0 ended
+```
+
+### <a name='tip43'></a>Printing to std::cout without race condition
+```c++
+// Valid from C++20
+#include <format>
+#include <vector>
+#include <thread>
+#include <iostream>
+
+int main()
+{
+    auto threads = std::vector<std::jthread>{};
+    for (int i = 0; i < 3; ++i)
+    {
+        threads.push_back(std::jthread([i]{
+            // The order of "hello, thread #", i, and "\n" from multiple threads is undefined,
+            // because we cannot guarantee that the three operator<< will get executed
+            // sequentially before other threads try the same job.
+            // ex) hello, thread #hello, thread #hello, thread #0\n2\n1\n
+            std::cout << "hello, thread #" << i << "\n";
+
+            // However, each operator<< behaves like an atomic operation!
+            // Simply using std::format to pass the whole message at once solves the problem.
+            std::cout << std::format("hello, thread #{}\n", i);
+        }));
+    }
+}
 ```
 
 ## Other Tips

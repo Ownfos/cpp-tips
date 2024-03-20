@@ -41,6 +41,7 @@
 ### Concurrency
 - [뮤텍스를 수동으로 잠그고 푸는 것은 위험합니다](#tip29)
 - [멀티스레딩을 할 때 특정 신호를 기다리거나 동기화 지점을 만드는 방법](#tip34)
+- [std::cout에 race condition 없이 출력하기](#tip43)
 ### Other Tips
 - [템플릿 타입의 중첩된 symbol을 타입 이름으로 사용하기](#tip22)
 - [switch문 안에서 변수 선언하기](#tip17)
@@ -1707,6 +1708,34 @@ worker thread #1 ended
 worker thread #2 ended
 worker thread #0 ended
 ```
+
+### <a name='tip43'></a>Printing to std::cout without race condition
+```c++
+// C++20부터 가능
+#include <format>
+#include <vector>
+#include <thread>
+#include <iostream>
+
+int main()
+{
+    auto threads = std::vector<std::jthread>{};
+    for (int i = 0; i < 3; ++i)
+    {
+        threads.push_back(std::jthread([i]{
+            // 여러 스레드에서 출력되는 "hello, thread #", i, 그리고 "\n"의 순서는 매번 달라질 수 있습니다.
+            // <<연산자 셋을 모두 완료하기 전에 다른 스레드에서 같은 작업을 시작하지 않는다는 보장이 없기 때문입니다.
+            // ex) hello, thread #hello, thread #hello, thread #0\n2\n1\n
+            std::cout << "hello, thread #" << i << "\n";
+
+            // 하지만, 각각의 <<연산자 자체는 atomic하게 이뤄집니다.
+            // 그러므로 std::format을 사용해 전체 메시지를 한 번에 전달하는 것으로 문제를 해결할 수 있습니다.
+            std::cout << std::format("hello, thread #{}\n", i);
+        }));
+    }
+}
+```
+
 
 ## Other Tips
 ### <a name='tip22'></a>템플릿 타입의 중첩된 symbol을 타입 이름으로 사용하기
